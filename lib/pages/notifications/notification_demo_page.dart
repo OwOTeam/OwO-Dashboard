@@ -28,15 +28,7 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
 
   /// 初始化通知服务
   Future<void> _initializeNotifications() async {
-    // 1. 初始化服务
-    final success = await _notificationService.initialize();
-
-    if (!success) {
-      _showSnackBar('通知服务初始化失败');
-      return;
-    }
-
-    // 2. 设置通用回调
+    // 设置通用回调
     _notificationService.onNotificationTapped = (response) {
       _showSnackBar('通知被点击: ${response.payload ?? "无数据"}');
     };
@@ -54,8 +46,6 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
       final replyText = response.input ?? '(空)';
       _showSnackBar('用户回复: $replyText');
     });
-
-    _showSnackBar('通知服务初始化成功');
   }
 
   @override

@@ -12,6 +12,7 @@ import 'core/layouts/responsive.dart';
 import 'core/models/navigation_item.dart';
 import 'core/widgets/common/dialog.dart';
 import 'core/widgets/desktop/custom_title_bar.dart';
+import 'core/services/notification_service.dart';
 import 'pages/explore/explore_page.dart';
 import 'pages/home/home_page.dart';
 import 'pages/messages/messages_page.dart';
@@ -112,13 +113,38 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   void initState() {
     super.initState();
     windowManager.addListener(this);
-    _init();
+
+    _initializeApp();
+    setState(() {});
   }
 
-  void _init() async {
+  /// 初始化应用
+  Future<void> _initializeApp() async {
+    // +++ App Core 核心服务/组件初始化开始 +++
+
+    // 初始化通知服务
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+
     // Add this line to override the default close handler
     await windowManager.setPreventClose(true);
-    setState(() {});
+
+    // +++ App Core 核心服务/组件初始化结束 +++
+  }
+
+  /// 集中处理关闭前的清理工作
+  Future<void> _handleAppCleanup() async {
+    try {
+      // 在这里集中处理所有需要最后保存或清理的操作
+      debugPrint('开始执行应用清理操作...');
+
+      // 清理通知服务资源
+      await NotificationService().dispose();
+
+      debugPrint('应用清理完成。');
+    } catch (e) {
+      debugPrint('清理过程中出错: $e');
+    }
   }
 
   @override
@@ -183,8 +209,14 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       );
 
       if (result == true && mounted) {
-        // 展示关闭中的弹窗，提供更好的视觉反馈
-        _showClosingDialog();
+        // 使用通用的加载弹窗，可以编写主标题、子标题，并根据 ConfirmDialogStyle 切换风格
+        // 这里演示使用 material 风格（也可以尝试 glass 或 darkNeon）
+        showLoadingDialog(
+          context: context,
+          style: ConfirmDialogStyle.material,
+          title: '正在关闭应用...',
+          content: '请稍候，正在保存数据',
+        );
 
         // 延迟一小段时间让弹窗显示出来
         await Future.delayed(const Duration(milliseconds: 300));
@@ -195,65 +227,6 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
         // 销毁窗口
         await windowManager.destroy();
       }
-    }
-  }
-
-  /// 显示关闭中的提示弹窗
-  void _showClosingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 20),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: CircularProgressIndicator(strokeWidth: 3),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  '正在关闭应用...',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '请稍候，正在保存数据',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 集中处理关闭前的清理工作
-  Future<void> _handleAppCleanup() async {
-    try {
-      // 在这里集中处理所有需要最后保存或清理的操作
-      debugPrint('开始执行应用清理操作...');
-
-      debugPrint('应用清理完成。');
-    } catch (e) {
-      debugPrint('清理过程中出错: $e');
     }
   }
 }
