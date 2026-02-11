@@ -103,12 +103,14 @@ Future<bool?> showMaterialConfirmDialog({
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  content,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade500),
-                ),
+                if (content.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    content,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                ],
                 if (hasConfirm || hasCancel) ...[
                   const SizedBox(height: 24),
                   Row(
@@ -170,10 +172,12 @@ Future<bool?> showCupertinoConfirmDialog({
     context: context,
     builder: (_) => CupertinoAlertDialog(
       title: Text(title),
-      content: Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Text(content),
-      ),
+      content: content.isEmpty
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(content),
+            ),
       actions: [
         if (hasCancel)
           CupertinoDialogAction(
@@ -235,16 +239,18 @@ Future<bool?> showGlassConfirmDialog({
                     decoration: TextDecoration.none,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  content,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                    decoration: TextDecoration.none,
+                if (content.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    content,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                      decoration: TextDecoration.none,
+                    ),
                   ),
-                ),
+                ],
                 if (hasConfirm || hasCancel) ...[
                   const SizedBox(height: 24),
                   Row(
@@ -328,16 +334,18 @@ Future<bool?> showDarkNeonConfirmDialog({
                   decoration: TextDecoration.none,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                content,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                  decoration: TextDecoration.none,
+              if (content.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  content,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    decoration: TextDecoration.none,
+                  ),
                 ),
-              ),
+              ],
               if (hasConfirm || hasCancel) ...[
                 const SizedBox(height: 24),
                 Row(

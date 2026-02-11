@@ -18,7 +18,7 @@ import 'pages/messages/messages_page.dart';
 import 'pages/notifications/notification_demo_page.dart';
 import 'pages/notifications/notifications_page.dart';
 import 'pages/profile/profile_page.dart';
-import 'pages/settings/theme_settings_page.dart';
+import 'pages/settings/settings_page.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -101,10 +101,10 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     ),
     NavigationItem(
       id: 'settings',
-      title: '主题设置',
+      title: '设置',
       icon: Icons.settings_outlined,
       activeIcon: Icons.settings,
-      page: ThemeSettingsPage(),
+      page: SettingsPage(),
     ),
   ];
 
@@ -174,9 +174,8 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     if (isPreventClose && mounted) {
       final result = await showAdvancedConfirmDialog(
         context: context,
-        // style: ConfirmDialogStyle.glass,
         title: '确认退出程序吗?',
-        content: '',
+        content: '', // 现在内容为空时会自动优化间距
         icon: Icons.warning_amber_rounded,
         confirmColor: Colors.redAccent,
         confirmText: '确认',
@@ -184,8 +183,77 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       );
 
       if (result == true && mounted) {
+        // 展示关闭中的弹窗，提供更好的视觉反馈
+        _showClosingDialog();
+
+        // 延迟一小段时间让弹窗显示出来
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        // 执行清理操作
+        await _handleAppCleanup();
+
+        // 销毁窗口
         await windowManager.destroy();
       }
+    }
+  }
+
+  /// 显示关闭中的提示弹窗
+  void _showClosingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 20),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  '正在关闭应用...',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '请稍候，正在保存数据',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 集中处理关闭前的清理工作
+  Future<void> _handleAppCleanup() async {
+    try {
+      // 在这里集中处理所有需要最后保存或清理的操作
+      debugPrint('开始执行应用清理操作...');
+
+      debugPrint('应用清理完成。');
+    } catch (e) {
+      debugPrint('清理过程中出错: $e');
     }
   }
 }

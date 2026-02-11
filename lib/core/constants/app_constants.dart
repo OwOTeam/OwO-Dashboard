@@ -33,6 +33,8 @@ class AppConstants {
   // ========== 外部链接 ==========
   static const String donationUrl = 'https://owoblog.com/donation';
   static const String githubUrl = 'https://github.com/Tommy131';
+  static const String githubRepoUrl =
+      'https://github.com/OwOTeam/OwO-Dashboard';
   static const String instagramUrl = 'https://instagram.com/$instagramName';
   static const String owoServiceUrl = 'https://owoblog.com/service';
 
