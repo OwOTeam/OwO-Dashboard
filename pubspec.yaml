@@ -1,7 +1,7 @@
 name: owo_dashboard
-description: "A new Flutter project."
+description: "An Application framework based on Flutter."
 publish_to: 'none'
-version: 0.1.0
+version: 0.0.1
 
 environment:
   sdk: ^3.9.2
@@ -30,6 +30,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/app_icon.png
 
 # 🖼️ **应用图标配置**：跨平台图标生成，使用flutter_launcher_icons插件。
 flutter_icons:
