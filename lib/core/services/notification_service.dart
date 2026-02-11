@@ -23,6 +23,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
@@ -196,8 +197,10 @@ class NotificationService {
   /// Windows 应用配置
   static const String _windowsAppName = AppConstants.appName;
   static const String _windowsAppUserModelId = AppConstants.appPackageName;
-  static const String _windowsGuid = 'b8206b54-a31f-48cc-bede-3f1bf3102859';
-  static const String _windowsIconPath = '../../assets/icons/app_icon.png';
+  static const String _windowsGuid = 'b8206b54-a31f-48cc-bede-3f1bf3102861';
+
+  // 图标路径
+  static const String _iconPath = 'assets/icons/app_icon.png';
 
   /// 本地存储键
   static const String _notificationHistoryKey = 'notification_history';
@@ -263,11 +266,22 @@ class NotificationService {
         _timeZoneInitialized = true;
       }
 
+      // 准备 Windows 图标（Windows 通知需要物理文件路径）
+      String? windowsIconPath;
+      if (defaultTargetPlatform == TargetPlatform.windows) {
+        windowsIconPath = await _prepareWindowsIcon();
+      }
+
       // 3. 创建初始化配置
       final initSettings = InitializationSettings(
         android: _createAndroidInitSettings(),
         iOS: _createIOSInitSettings(),
-        windows: _createWindowsInitSettings(),
+        macOS: _createIOSInitSettings(),
+        windows: _createWindowsInitSettings(windowsIconPath),
+        linux: LinuxInitializationSettings(
+          defaultActionName: 'Open notification',
+          defaultIcon: AssetsLinuxIcon(_iconPath),
+        ),
       );
 
       // 4. 初始化插件
@@ -298,7 +312,7 @@ class NotificationService {
 
   /// 创建 Android 初始化设置
   AndroidInitializationSettings _createAndroidInitSettings() {
-    return const AndroidInitializationSettings('@drawable/app_icon');
+    return const AndroidInitializationSettings('ic_launcher');
   }
 
   /// 创建 iOS 初始化设置
@@ -327,12 +341,39 @@ class NotificationService {
   }
 
   /// 创建 Windows 初始化设置
-  WindowsInitializationSettings _createWindowsInitSettings() {
-    return const WindowsInitializationSettings(
+  WindowsInitializationSettings _createWindowsInitSettings(
+    String? customIconPath,
+  ) {
+    return WindowsInitializationSettings(
       appName: _windowsAppName,
       appUserModelId: _windowsAppUserModelId,
       guid: _windowsGuid,
-      iconPath: _windowsIconPath,
+      // Windows 必须使用绝对路径，如果 customIconPath 为空则不设置路径，让插件使用默认逻辑
+      iconPath: (customIconPath != null && File(customIconPath).existsSync())
+          ? customIconPath
+          : null,
+    );
+  }
+
+  /// 准备 Windows 通知图标（将 Asset 导出为物理文件）
+  Future<String?> _prepareWindowsIcon() async {
+    return await _safeExecute(
+      () async {
+        final byteData = await rootBundle.load(_iconPath);
+        final directory = await getApplicationSupportDirectory();
+        final iconPath = '${directory.path}/app_icon.png';
+        final file = File(iconPath);
+        await file.writeAsBytes(
+          byteData.buffer.asUint8List(
+            byteData.offsetInBytes,
+            byteData.lengthInBytes,
+          ),
+        );
+        debugPrint('✅ 已准备 Windows 通知图标: $iconPath');
+        return iconPath;
+      },
+      '准备 Windows 图标',
+      null,
     );
   }
 
@@ -345,10 +386,11 @@ class NotificationService {
         await _requestAndroidPermissions();
         break;
       case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
         await _requestIOSPermissions();
         break;
       default:
-        // Windows 和其他平台不需要额外请求权限
+        // Windows、Linux 系统不需要额外请求权限
         break;
     }
   }
@@ -493,21 +535,42 @@ class NotificationService {
   /// 可以在这里处理导航逻辑
   void _onNotificationTapped(NotificationResponse response) {
     try {
+      // 提取和清理数据
+      final String? actionId = response.actionId?.isEmpty == true
+          ? null
+          : response.actionId;
+      final String? payload = response.payload?.isEmpty == true
+          ? null
+          : response.payload;
+
+      // 在 Windows 等平台上，response.id 可能为 null
+      // 尝试从 payload 中恢复 ID (如果我们之前在发送时注入了 ID)
+      int? notificationId = response.id;
+      if (notificationId == null && payload != null) {
+        try {
+          final data = jsonDecode(payload);
+          if (data is Map && data.containsKey('_n_id')) {
+            notificationId = data['_n_id'];
+          }
+        } catch (_) {
+          // 不是 JSON 格式或解析失败，忽略
+        }
+      }
+
       debugPrint('''
 📱 通知交互:
-   - ID: ${response.id}
-   - Action: ${response.actionId ?? '点击通知'}
-   - Payload: ${response.payload ?? '无'}
-   - Input: ${response.input ?? '无'}
+   - ID: ${notificationId ?? 'null'}
+   - Action: ${actionId ?? '点击通知'}
+   - Payload: ${payload ?? '无'}
+   - Input: ${response.input?.isEmpty == true ? '无' : response.input ?? '无'}
 ''');
 
       // 更新通知状态为已点击
-      if (response.id != null) {
-        _markNotificationAsClicked(response.id!);
+      if (notificationId != null) {
+        _markNotificationAsClicked(notificationId);
       }
 
       // 处理特定 action 回调
-      final actionId = response.actionId;
       if (actionId != null && _actionCallbacks.containsKey(actionId)) {
         _actionCallbacks[actionId]!(response);
       } else {
@@ -518,6 +581,24 @@ class NotificationService {
       debugPrint('❌ 处理通知点击失败: $e');
       debugPrint('堆栈: $stackTrace');
     }
+  }
+
+  /// 内部辅助：构建 Payload (注入 ID 以便在 Windows 等平台恢复)
+  String? _wrapPayload(int id, String? payload) {
+    if (payload == null) {
+      return jsonEncode({'_n_id': id});
+    }
+    try {
+      // 如果已经是 JSON，尝试合并
+      final data = jsonDecode(payload);
+      if (data is Map) {
+        data['_n_id'] = id;
+        return jsonEncode(data);
+      }
+    } catch (_) {
+      // 不是 JSON，作为普通字符串和 ID 封装
+    }
+    return jsonEncode({'_n_id': id, 'data': payload});
   }
 
   // ==================== 通知详情构建器 ====================
@@ -534,6 +615,15 @@ class NotificationService {
     AndroidNotificationDetails? customAndroid,
     DarwinNotificationDetails? customIOS,
   }) {
+    final darwinDetails =
+        customIOS ??
+        const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.active,
+        );
+
     return NotificationDetails(
       android:
           customAndroid ??
@@ -541,19 +631,66 @@ class NotificationService {
             channelId,
             channelName,
             channelDescription: channelDescription ?? '$channelName渠道',
-            icon: 'notification_icon',
+            icon: 'ic_launcher', // 小图标（状态栏）
+            largeIcon: const DrawableResourceAndroidBitmap(
+              'ic_launcher',
+            ), // 大图标（通知栏右侧）
             importance: importance,
             priority: priority,
             showWhen: true,
           ),
-      iOS:
-          customIOS ??
-          const DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
+      iOS: darwinDetails,
+      macOS: darwinDetails,
       windows: const WindowsNotificationDetails(),
+      linux: const LinuxNotificationDetails(),
+    );
+  }
+
+  // ==================== 统一执行器 ====================
+
+  /// 统一的通知显示执行器
+  ///
+  /// 封装了初始化检查、限流、去重、Payload 封装、状态记录和错误处理
+  Future<bool> _executeShow({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+    required NotificationDetails details,
+    String? logMessage,
+    String operationName = '显示通知',
+  }) async {
+    return await _safeExecute(
+      () async {
+        await _ensureInitialized();
+
+        // 限流检查
+        if (_shouldRateLimit(id)) return false;
+
+        // 去重处理
+        await _handleDuplicateNotification(id);
+
+        // 封装 Payload (注入 ID 以便在 Windows 等平台恢复)
+        final finalPayload = _wrapPayload(id, payload);
+
+        // 调用原生通知
+        await _notifications.show(
+          id,
+          title,
+          body,
+          details,
+          payload: finalPayload,
+        );
+
+        // 记录状态
+        _recordNotificationTime(id);
+        _createNotificationState(id, title, body, payload);
+
+        if (logMessage != null) debugPrint(logMessage);
+        return true;
+      },
+      operationName,
+      false,
     );
   }
 
@@ -747,35 +884,21 @@ class NotificationService {
     String? payload,
     NotificationPriority priority = NotificationPriority.normal,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    final (importance, androidPriority) = _mapPriority(priority);
+    final details = _buildNotificationDetails(
+      channelId: _defaultChannelId,
+      channelName: _defaultChannelName,
+      importance: importance,
+      priority: androidPriority,
+    );
 
-        // 限流检查
-        if (_shouldRateLimit(id)) return false;
-
-        // 去重处理
-        await _handleDuplicateNotification(id);
-
-        final (importance, androidPriority) = _mapPriority(priority);
-        final details = _buildNotificationDetails(
-          channelId: _defaultChannelId,
-          channelName: _defaultChannelName,
-          importance: importance,
-          priority: androidPriority,
-        );
-
-        await _notifications.show(id, title, body, details, payload: payload);
-
-        // 记录状态
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, payload);
-
-        debugPrint('📨 发送简单通知: $title');
-        return true;
-      },
-      '显示通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '📨 发送简单通知: $title',
     );
   }
 
@@ -797,49 +920,50 @@ class NotificationService {
     required int progress,
     required int maxProgress,
     bool indeterminate = false,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    // Android: 显示进度条
+    final androidDetails = AndroidNotificationDetails(
+      _progressChannelId,
+      _progressChannelName,
+      channelDescription: '显示进度的通知',
+      icon: 'ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.low,
+      priority: Priority.low,
+      showProgress: true,
+      maxProgress: maxProgress,
+      progress: progress,
+      indeterminate: indeterminate,
+      onlyAlertOnce: true, // 只在首次显示时提醒
+      ongoing: progress < maxProgress, // 进行中时显示为持续通知
+    );
 
-        // Android: 显示进度条
-        final androidDetails = AndroidNotificationDetails(
-          _progressChannelId,
-          _progressChannelName,
-          channelDescription: '显示进度的通知',
-          icon: 'notification_icon',
-          importance: Importance.low,
-          priority: Priority.low,
-          showProgress: true,
-          maxProgress: maxProgress,
-          progress: progress,
-          indeterminate: indeterminate,
-          onlyAlertOnce: true, // 只在首次显示时提醒
-          ongoing: progress < maxProgress, // 进行中时显示为持续通知
-        );
+    // iOS/macOS: 显示进度百分比
+    final percentage = maxProgress > 0
+        ? (progress / maxProgress * 100).toStringAsFixed(0)
+        : '0';
+    final darwinDetails = DarwinNotificationDetails(
+      subtitle: indeterminate ? '处理中...' : '进度: $percentage%',
+    );
 
-        // iOS: 显示进度百分比
-        final percentage = maxProgress > 0
-            ? (progress / maxProgress * 100).toStringAsFixed(0)
-            : '0';
-        final iosDetails = DarwinNotificationDetails(
-          subtitle: indeterminate ? '处理中...' : '进度: $percentage%',
-        );
+    final details = _buildNotificationDetails(
+      channelId: _progressChannelId,
+      channelName: _progressChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-          windows: const WindowsNotificationDetails(),
-        );
+    final body = indeterminate ? '处理中...' : '$progress/$maxProgress';
 
-        final body = indeterminate ? '处理中...' : '$progress/$maxProgress';
-        await _notifications.show(id, title, body, details);
-
-        debugPrint('📊 更新进度通知: $title - $progress/$maxProgress');
-        return true;
-      },
-      '显示进度通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '📊 更新进度通知: $title - $progress/$maxProgress',
+      operationName: '显示进度通知',
     );
   }
 
@@ -857,48 +981,42 @@ class NotificationService {
     required String title,
     required String body,
     required String bigText,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    // Android: 使用 BigTextStyle
+    final androidDetails = AndroidNotificationDetails(
+      _bigTextChannelId,
+      _bigTextChannelName,
+      channelDescription: '显示大量文本的通知',
+      icon: 'ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.high,
+      priority: Priority.high,
+      styleInformation: BigTextStyleInformation(
+        bigText,
+        contentTitle: title,
+        summaryText: body,
+      ),
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    // iOS/macOS: 使用 subtitle 显示摘要
+    final darwinDetails = DarwinNotificationDetails(subtitle: body);
 
-        // Android: 使用 BigTextStyle
-        final androidDetails = AndroidNotificationDetails(
-          _bigTextChannelId,
-          _bigTextChannelName,
-          channelDescription: '显示大量文本的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-          styleInformation: BigTextStyleInformation(
-            bigText,
-            contentTitle: title,
-            summaryText: body,
-          ),
-        );
+    final details = _buildNotificationDetails(
+      channelId: _bigTextChannelId,
+      channelName: _bigTextChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        // iOS: 使用 subtitle 显示摘要
-        final iosDetails = DarwinNotificationDetails(subtitle: body);
-
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-          windows: const WindowsNotificationDetails(),
-        );
-
-        await _notifications.show(id, title, bigText, details);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, null);
-
-        debugPrint('📄 发送大文本通知: $title');
-        return true;
-      },
-      '显示大文本通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: bigText,
+      payload: payload,
+      details: details,
+      logMessage: '📄 发送大文本通知: $title',
+      operationName: '显示大文本通知',
     );
   }
 
@@ -920,50 +1038,44 @@ class NotificationService {
     required String title,
     required String body,
     required String imageUrl,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    // Android: 使用 BigPictureStyle
+    final androidDetails = AndroidNotificationDetails(
+      _bigPictureChannelId,
+      _bigPictureChannelName,
+      channelDescription: '显示图片的通知',
+      icon: 'ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.high,
+      priority: Priority.high,
+      styleInformation: BigPictureStyleInformation(
+        FilePathAndroidBitmap(imageUrl),
+        contentTitle: title,
+        summaryText: body,
+      ),
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    // iOS/macOS: 使用附件
+    final darwinDetails = DarwinNotificationDetails(
+      attachments: [DarwinNotificationAttachment(imageUrl)],
+    );
 
-        // Android: 使用 BigPictureStyle
-        final androidDetails = AndroidNotificationDetails(
-          _bigPictureChannelId,
-          _bigPictureChannelName,
-          channelDescription: '显示图片的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-          styleInformation: BigPictureStyleInformation(
-            FilePathAndroidBitmap(imageUrl),
-            contentTitle: title,
-            summaryText: body,
-          ),
-        );
+    final details = _buildNotificationDetails(
+      channelId: _bigPictureChannelId,
+      channelName: _bigPictureChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        // iOS: 使用附件
-        final iosDetails = DarwinNotificationDetails(
-          attachments: [DarwinNotificationAttachment(imageUrl)],
-        );
-
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-          windows: const WindowsNotificationDetails(),
-        );
-
-        await _notifications.show(id, title, body, details);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, null);
-
-        debugPrint('🖼️ 发送图片通知: $title');
-        return true;
-      },
-      '显示图片通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '🖼️ 发送图片通知: $title',
+      operationName: '显示图片通知',
     );
   }
 
@@ -981,6 +1093,7 @@ class NotificationService {
     required String title,
     required String body,
     required String imageUrl,
+    String? payload,
   }) async {
     return await _safeExecute(
       () async {
@@ -1012,11 +1125,17 @@ class NotificationService {
             title: title,
             body: body,
             imageUrl: filePath,
+            payload: payload,
           );
         } catch (e) {
           debugPrint('⚠️ 下载通知图片失败: $e，降级为普通通知');
           // 降级为普通通知
-          return await showNotification(id: id, title: title, body: body);
+          return await showNotification(
+            id: id,
+            title: title,
+            body: body,
+            payload: payload,
+          );
         }
       },
       '显示网络图片通知',
@@ -1099,6 +1218,7 @@ class NotificationService {
     required String title,
     required String body,
     required RepeatInterval interval,
+    String? payload,
   }) async {
     return await _safeExecute(
       () async {
@@ -1110,6 +1230,7 @@ class NotificationService {
           channelDescription: '周期性推送的通知',
         );
 
+        final finalPayload = _wrapPayload(id, payload);
         await _notifications.periodicallyShow(
           id,
           title,
@@ -1117,9 +1238,10 @@ class NotificationService {
           interval,
           details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: finalPayload,
         );
 
-        _createNotificationState(id, title, body, null);
+        _createNotificationState(id, title, body, payload);
 
         debugPrint('🔄 设置周期通知: $title，间隔: $interval');
         return true;
@@ -1145,6 +1267,7 @@ class NotificationService {
     required String body,
     required Duration interval,
     DateTime? startTime,
+    String? payload,
   }) async {
     return await _safeExecute(
       () async {
@@ -1156,6 +1279,7 @@ class NotificationService {
           channelName: _periodicChannelName,
         );
 
+        final finalPayload = _wrapPayload(id, payload);
         // 使用定时通知模拟自定义周期
         await _notifications.zonedSchedule(
           id,
@@ -1165,9 +1289,10 @@ class NotificationService {
           details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.time,
+          payload: finalPayload,
         );
 
-        _createNotificationState(id, title, body, null);
+        _createNotificationState(id, title, body, payload);
 
         debugPrint('🔄 设置自定义周期通知: $title，间隔: $interval');
         return true;
@@ -1195,49 +1320,43 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    // Android: 使用 AndroidNotificationAction
+    const androidDetails = AndroidNotificationDetails(
+      _actionChannelId,
+      _actionChannelName,
+      channelDescription: '带操作按钮的通知',
+      icon: 'ic_launcher',
+      largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.high,
+      priority: Priority.high,
+      actions: [
+        AndroidNotificationAction('confirm', '确认'),
+        AndroidNotificationAction('cancel', '取消'),
+      ],
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    // iOS/macOS: 使用 categoryIdentifier 关联操作分类
+    const darwinDetails = DarwinNotificationDetails(
+      categoryIdentifier: _iosActionCategoryId,
+    );
 
-        // Android: 使用 AndroidNotificationAction
-        const androidDetails = AndroidNotificationDetails(
-          _actionChannelId,
-          _actionChannelName,
-          channelDescription: '带操作按钮的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-          actions: [
-            AndroidNotificationAction('confirm', '确认'),
-            AndroidNotificationAction('cancel', '取消'),
-          ],
-        );
+    final details = _buildNotificationDetails(
+      channelId: _actionChannelId,
+      channelName: _actionChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        // iOS: 使用 categoryIdentifier 关联操作分类
-        const iosDetails = DarwinNotificationDetails(
-          categoryIdentifier: _iosActionCategoryId,
-        );
-
-        const details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-          windows: WindowsNotificationDetails(),
-        );
-
-        await _notifications.show(id, title, body, details);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, null);
-
-        debugPrint('🔘 发送操作通知: $title');
-        return true;
-      },
-      '显示操作通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '🔘 发送操作通知: $title',
+      operationName: '显示操作通知',
     );
   }
 
@@ -1261,51 +1380,46 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    // Android: 支持内联回复
+    const androidDetails = AndroidNotificationDetails(
+      _inlineReplyChannelId,
+      _inlineReplyChannelName,
+      channelDescription: '支持快速回复的通知',
+      icon: 'ic_launcher',
+      largeIcon: DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.high,
+      priority: Priority.high,
+      actions: [
+        AndroidNotificationAction(
+          'reply',
+          '回复',
+          inputs: [AndroidNotificationActionInput(label: '输入回复内容...')],
+        ),
+      ],
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    // iOS/macOS: 使用文本输入操作
+    const darwinDetails = DarwinNotificationDetails(
+      categoryIdentifier: _iosReplyCategoryId,
+    );
 
-        // Android: 支持内联回复
-        const androidDetails = AndroidNotificationDetails(
-          _inlineReplyChannelId,
-          _inlineReplyChannelName,
-          channelDescription: '支持快速回复的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-          actions: [
-            AndroidNotificationAction(
-              'reply',
-              '回复',
-              inputs: [AndroidNotificationActionInput(label: '输入回复内容...')],
-            ),
-          ],
-        );
+    final details = _buildNotificationDetails(
+      channelId: _inlineReplyChannelId,
+      channelName: _inlineReplyChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        // iOS: 使用文本输入操作
-        const iosDetails = DarwinNotificationDetails(
-          categoryIdentifier: _iosReplyCategoryId,
-        );
-
-        const details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-        );
-
-        await _notifications.show(id, title, body, details);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, null);
-
-        debugPrint('💬 发送回复通知: $title');
-        return true;
-      },
-      '显示回复通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '💬 发送回复通知: $title',
+      operationName: '显示回复通知',
     );
   }
 
@@ -1338,50 +1452,39 @@ class NotificationService {
     String? groupSummary,
     String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    final androidDetails = AndroidNotificationDetails(
+      _groupChannelId,
+      _groupChannelName,
+      channelDescription: '分组显示的通知',
+      icon: 'ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.high,
+      priority: Priority.high,
+      groupKey: groupKey,
+      setAsGroupSummary: groupSummary != null,
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    final iosDetails = DarwinNotificationDetails(
+      threadIdentifier: groupKey, // iOS 使用 threadIdentifier 分组
+    );
 
-        final androidDetails = AndroidNotificationDetails(
-          _groupChannelId,
-          _groupChannelName,
-          channelDescription: '分组显示的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-          groupKey: groupKey,
-          setAsGroupSummary: groupSummary != null,
-        );
+    final details = _buildNotificationDetails(
+      channelId: _groupChannelId,
+      channelName: _groupChannelName,
+      customAndroid: androidDetails,
+      customIOS: iosDetails,
+    );
 
-        final iosDetails = DarwinNotificationDetails(
-          threadIdentifier: groupKey, // iOS 使用 threadIdentifier 分组
-        );
+    final displayBody = groupSummary ?? body;
 
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-        );
-
-        final displayBody = groupSummary ?? body;
-        await _notifications.show(
-          id,
-          title,
-          displayBody,
-          details,
-          payload: payload,
-        );
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, payload);
-
-        debugPrint('📂 发送分组通知: $title (分组: $groupKey)');
-        return true;
-      },
-      '显示分组通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: displayBody,
+      payload: payload,
+      details: details,
+      logMessage: '📂 发送分组通知: $title (分组: $groupKey)',
+      operationName: '显示分组通知',
     );
   }
 
@@ -1404,47 +1507,41 @@ class NotificationService {
     required String title,
     required String body,
     String? soundFile,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    final androidDetails = AndroidNotificationDetails(
+      _soundChannelId,
+      _soundChannelName,
+      channelDescription: '带自定义声音的通知',
+      icon: 'ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: Importance.high,
+      priority: Priority.high,
+      sound: soundFile != null
+          ? RawResourceAndroidNotificationSound(soundFile)
+          : null,
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    final darwinDetails = DarwinNotificationDetails(
+      sound: soundFile,
+      presentSound: true,
+    );
 
-        final androidDetails = AndroidNotificationDetails(
-          _soundChannelId,
-          _soundChannelName,
-          channelDescription: '带自定义声音的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-          sound: soundFile != null
-              ? RawResourceAndroidNotificationSound(soundFile)
-              : null,
-        );
+    final details = _buildNotificationDetails(
+      channelId: _soundChannelId,
+      channelName: _soundChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        final iosDetails = DarwinNotificationDetails(
-          sound: soundFile,
-          presentSound: true,
-        );
-
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-          windows: const WindowsNotificationDetails(),
-        );
-
-        await _notifications.show(id, title, body, details);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, null);
-
-        debugPrint('🔊 发送声音通知: $title');
-        return true;
-      },
-      '显示声音通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '🔊 发送声音通知: $title',
+      operationName: '显示声音通知',
     );
   }
 
@@ -1464,44 +1561,27 @@ class NotificationService {
     required String title,
     required String body,
     int? badgeNumber,
+    String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    final darwinDetails = DarwinNotificationDetails(
+      badgeNumber: badgeNumber,
+      presentBadge: true,
+    );
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    final details = _buildNotificationDetails(
+      channelId: _badgeChannelId,
+      channelName: _badgeChannelName,
+      customIOS: darwinDetails,
+    );
 
-        const androidDetails = AndroidNotificationDetails(
-          _badgeChannelId,
-          _badgeChannelName,
-          channelDescription: '带徽章数字的通知',
-          icon: 'notification_icon',
-          importance: Importance.high,
-          priority: Priority.high,
-        );
-
-        final iosDetails = DarwinNotificationDetails(
-          badgeNumber: badgeNumber,
-          presentBadge: true,
-        );
-
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-          windows: const WindowsNotificationDetails(),
-        );
-
-        await _notifications.show(id, title, body, details);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, null);
-
-        debugPrint('🔢 发送徽章通知: $title, 数字: $badgeNumber');
-        return true;
-      },
-      '显示徽章通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '🔢 发送徽章通知: $title, 数字: $badgeNumber',
+      operationName: '显示徽章通知',
     );
   }
 
@@ -1522,42 +1602,36 @@ class NotificationService {
     required NotificationPriority priority,
     String? payload,
   }) async {
-    return await _safeExecute(
-      () async {
-        await _ensureInitialized();
+    final (importance, androidPriority) = _mapPriority(priority);
 
-        if (_shouldRateLimit(id)) return false;
-        await _handleDuplicateNotification(id);
+    final androidDetails = AndroidNotificationDetails(
+      _defaultChannelId,
+      _defaultChannelName,
+      icon: 'ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('ic_launcher'),
+      importance: importance,
+      priority: androidPriority,
+    );
 
-        final (importance, androidPriority) = _mapPriority(priority);
+    final darwinDetails = DarwinNotificationDetails(
+      interruptionLevel: _mapIOSInterruptionLevel(priority),
+    );
 
-        final androidDetails = AndroidNotificationDetails(
-          _defaultChannelId,
-          _defaultChannelName,
-          icon: 'notification_icon',
-          importance: importance,
-          priority: androidPriority,
-        );
+    final details = _buildNotificationDetails(
+      channelId: _defaultChannelId,
+      channelName: _defaultChannelName,
+      customAndroid: androidDetails,
+      customIOS: darwinDetails,
+    );
 
-        final iosDetails = DarwinNotificationDetails(
-          interruptionLevel: _mapIOSInterruptionLevel(priority),
-        );
-
-        final details = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-        );
-
-        await _notifications.show(id, title, body, details, payload: payload);
-
-        _recordNotificationTime(id);
-        _createNotificationState(id, title, body, payload);
-
-        debugPrint('⚡ 发送优先级通知: $title (优先级: $priority)');
-        return true;
-      },
-      '显示优先级通知',
-      false,
+    return await _executeShow(
+      id: id,
+      title: title,
+      body: body,
+      payload: payload,
+      details: details,
+      logMessage: '⚡ 发送优先级通知: $title (优先级: $priority)',
+      operationName: '显示优先级通知',
     );
   }
 
@@ -1657,12 +1731,15 @@ class NotificationService {
   Future<List<ActiveNotification>> getActiveNotifications() async {
     return await _safeExecute(
       () async {
-        if (defaultTargetPlatform == TargetPlatform.android) {
-          return await _getAndroidActiveNotifications();
-        } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-          return await _getIOSActiveNotifications();
+        switch (defaultTargetPlatform) {
+          case TargetPlatform.android:
+            return await _getAndroidActiveNotifications();
+          case TargetPlatform.iOS:
+          case TargetPlatform.macOS:
+            return await _getIOSActiveNotifications();
+          default:
+            return <ActiveNotification>[];
         }
-        return <ActiveNotification>[];
       },
       '获取活动通知',
       <ActiveNotification>[],
