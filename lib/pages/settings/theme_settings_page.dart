@@ -4,6 +4,7 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 
 import '../../core/theme/app_theme_data.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../core/widgets/common/snack_bar.dart';
 
 /// 统一的主题设置页面
 class ThemeSettingsPage extends StatelessWidget {
@@ -39,9 +40,7 @@ class ThemeSettingsPage extends StatelessWidget {
                     tooltip: '重置为默认',
                     onPressed: () {
                       context.read<ThemeProvider>().resetToDefault();
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('已重置为默认主题')));
+                      SnackBarHelper.showSuccess(context, '已重置为默认主题');
                     },
                   ),
                 ],
@@ -127,12 +126,7 @@ class _QuickThemeMenu extends StatelessWidget {
       tooltip: '快速切换主题',
       onSelected: (theme) {
         context.read<ThemeProvider>().setTheme(theme);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已切换到 ${theme.name}'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
+        SnackBarHelper.showSuccess(context, '已切换到 ${theme.name}');
       },
       itemBuilder: (context) {
         return AppThemeData.presetThemes.map((theme) {
@@ -297,12 +291,7 @@ class _PresetThemeGrid extends StatelessWidget {
           isSelected: isSelected,
           onTap: () {
             context.read<ThemeProvider>().setTheme(theme);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('已切换到 ${theme.name}'),
-                duration: const Duration(seconds: 1),
-              ),
-            );
+            SnackBarHelper.showSuccess(context, '已切换到 ${theme.name}');
           },
         );
       },
@@ -495,9 +484,7 @@ class _CustomThemeSection extends StatelessWidget {
                 nameController.text.isEmpty ? '自定义主题' : nameController.text,
               );
               Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('自定义主题已应用')));
+              SnackBarHelper.showSuccess(context, '自定义主题已应用');
             },
             child: const Text('应用'),
           ),

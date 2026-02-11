@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/widgets/common/snack_bar.dart';
 
 class NotificationDemoPage extends StatefulWidget {
   const NotificationDemoPage({super.key});
@@ -75,44 +76,52 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
             _buildButton('带声音通知', _showSoundNotification),
             _buildButton('带徽章通知', _showBadgeNotification),
           ]),
+          const Divider(height: 32),
 
           _buildSection('富媒体通知', [
             _buildButton('大文本通知', _showBigTextNotification),
             _buildButton('本地图片通知', _showLocalImageNotification),
             _buildButton('网络图片通知', _showNetworkImageNotification),
           ]),
+          const Divider(height: 32),
 
           _buildSection('进度通知', [
             _buildButton('开始进度通知', _startProgressNotification),
             _buildButton('不确定进度', _showIndeterminateProgress),
           ]),
+          const Divider(height: 32),
 
           _buildSection('定时通知', [
             _buildButton('5秒后通知', _scheduleNotification5Seconds),
             _buildButton('每分钟通知', _schedulePeriodicNotification),
             _buildButton('自定义周期(30秒)', _scheduleCustomPeriodic),
           ]),
+          const Divider(height: 32),
 
           _buildSection('交互通知', [
             _buildButton('操作按钮通知', _showActionNotification),
             _buildButton('快速回复通知', _showInlineReplyNotification),
           ]),
+          const Divider(height: 32),
 
           _buildSection('分组通知', [
             _buildButton('发送消息组(3条)', _showGroupedMessages),
             _buildButton('发送系统组(2条)', _showGroupedSystem),
           ]),
+          const Divider(height: 32),
 
           _buildSection('批量操作', [
             _buildButton('批量发送(5条)', _showBatchNotifications),
             _buildButton('取消所有通知', _cancelAllNotifications),
           ]),
+          const Divider(height: 32),
 
           _buildSection('权限和状态', [
             _buildButton('检查权限', _checkPermissions),
             _buildButton('获取待处理通知', _getPendingNotifications),
             _buildButton('获取活动通知', _getActiveNotifications),
           ]),
+          const Divider(height: 32),
 
           _buildSection('历史管理', [
             _buildButton('查看统计信息', _showStats),
@@ -138,7 +147,6 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
         ),
         const SizedBox(height: 8),
         ...children,
-        const Divider(height: 32),
       ],
     );
   }
@@ -156,10 +164,21 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
     );
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  void _showSnackBar(String message, {SnackBarType type = SnackBarType.info}) {
+    switch (type) {
+      case SnackBarType.success:
+        SnackBarHelper.showSuccess(context, message);
+        break;
+      case SnackBarType.warning:
+        SnackBarHelper.showWarning(context, message);
+        break;
+      case SnackBarType.error:
+        SnackBarHelper.showError(context, message);
+        break;
+      case SnackBarType.info:
+        SnackBarHelper.showInfo(context, message);
+        break;
+    }
   }
 
   // ==================== 示例方法 ====================
@@ -172,7 +191,11 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
       body: '这是一条基础的通知消息',
       payload: 'simple_notification_data',
     );
-    _showSnackBar(success ? '发送成功' : '发送失败');
+    if (success) {
+      _showSnackBar('发送成功', type: SnackBarType.success);
+    } else {
+      _showSnackBar('发送失败', type: SnackBarType.error);
+    }
   }
 
   /// 2. 优先级通知
@@ -194,7 +217,7 @@ class _NotificationDemoPageState extends State<NotificationDemoPage> {
       body: '带有自定义提示音',
       soundFile: 'notification_sound', // 需要在 res/raw/ 中准备音频文件
     );
-    _showSnackBar('已发送声音通知');
+    _showSnackBar('已发送声音通知', type: SnackBarType.success);
   }
 
   /// 4. 带徽章通知
@@ -428,7 +451,7 @@ iOS 上会显示摘要文本。
   /// 18. 取消所有通知
   Future<void> _cancelAllNotifications() async {
     await _notificationService.cancelAllNotifications();
-    _showSnackBar('已取消所有通知');
+    _showSnackBar('已取消所有通知', type: SnackBarType.warning);
   }
 
   /// 19. 检查权限
@@ -540,7 +563,7 @@ iOS 上会显示摘要文本。
   /// 25. 清除所有历史
   Future<void> _clearAllHistory() async {
     await _notificationService.clearHistory();
-    _showSnackBar('已清除所有历史记录');
+    _showSnackBar('已清除所有历史记录', type: SnackBarType.error);
   }
 
   // ==================== 辅助方法 ====================
