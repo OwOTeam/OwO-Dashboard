@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../constants/app_constants.dart';
 import '../../theme/app_theme_data.dart';
 import '../../models/navigation_item.dart';
 import '../../theme/theme_provider.dart';
@@ -133,11 +134,10 @@ class _DesktopSidebarState extends State<DesktopSidebar>
 
   Widget _buildCollapsedHeader(ThemeData theme) {
     return Center(
-      child: _buildIconButton(
-        icon: Icons.menu,
-        tooltip: '展开侧边栏',
-        onPressed: _toggleSidebar,
-        theme: theme,
+      child: InkWell(
+        onTap: _toggleSidebar,
+        borderRadius: BorderRadius.circular(8),
+        child: _buildLogo(theme),
       ),
     );
   }
@@ -163,14 +163,20 @@ class _DesktopSidebarState extends State<DesktopSidebar>
       width: _logoSize,
       height: _logoSize,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(6),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
-      child: const Icon(Icons.face, color: Colors.white, size: _iconSize),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(AppConstants.assetIconPath, fit: BoxFit.contain),
+      ),
     );
   }
 
@@ -181,7 +187,7 @@ class _DesktopSidebarState extends State<DesktopSidebar>
           '你好!',
           style: theme.textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 15,
+            fontSize: 14,
           ),
           overflow: TextOverflow.ellipsis,
         ),

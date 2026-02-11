@@ -75,7 +75,7 @@ class _AppIconCard extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(30),
               child: Image.asset(
-                'assets/icons/app_icon.png',
+                AppConstants.assetIconPath,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => const Icon(
                   Icons.dashboard_rounded,

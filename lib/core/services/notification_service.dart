@@ -197,10 +197,10 @@ class NotificationService {
   /// Windows 应用配置
   static const String _windowsAppName = AppConstants.appName;
   static const String _windowsAppUserModelId = AppConstants.appPackageName;
-  static const String _windowsGuid = 'b8206b54-a31f-48cc-bede-3f1bf3102861';
+  static const String _windowsGuid = 'b8206b54-a31f-48cc-bede-3f1bf3102865';
 
-  // 图标路径
-  static const String _iconPath = 'assets/icons/app_icon.png';
+  // 图标路径 (从常量引用)
+  static const String _iconPath = AppConstants.assetIconPath;
 
   /// 本地存储键
   static const String _notificationHistoryKey = 'notification_history';
@@ -360,17 +360,26 @@ class NotificationService {
     return await _safeExecute(
       () async {
         final byteData = await rootBundle.load(_iconPath);
-        final directory = await getApplicationSupportDirectory();
-        final iconPath = '${directory.path}/app_icon.png';
+        final directory = await getTemporaryDirectory(); // 尝试使用临时目录，确保权限和路径兼容性
+        final iconPath =
+            '${directory.path}${Platform.pathSeparator}app_icon.png';
         final file = File(iconPath);
+
         await file.writeAsBytes(
           byteData.buffer.asUint8List(
             byteData.offsetInBytes,
             byteData.lengthInBytes,
           ),
+          flush: true,
         );
-        debugPrint('✅ 已准备 Windows 通知图标: $iconPath');
-        return iconPath;
+
+        if (await file.exists()) {
+          debugPrint('✅ 已准备 Windows 通知图标 (绝对路径): ${file.absolute.path}');
+          return file.absolute.path;
+        } else {
+          debugPrint('❌ Windows 通知图标写入失败');
+          return null;
+        }
       },
       '准备 Windows 图标',
       null,
