@@ -360,7 +360,8 @@ class NotificationService {
     return await _safeExecute(
       () async {
         final byteData = await rootBundle.load(_iconPath);
-        final directory = await getTemporaryDirectory(); // 尝试使用临时目录，确保权限和路径兼容性
+        final directory =
+            await getApplicationCacheDirectory(); // 尝试使用临时目录，确保权限和路径兼容性
         final iconPath =
             '${directory.path}${Platform.pathSeparator}app_icon.png';
         final file = File(iconPath);

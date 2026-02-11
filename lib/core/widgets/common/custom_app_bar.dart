@@ -33,7 +33,7 @@ class CustomAppBar {
         IconButton(
           icon: const Icon(Icons.search),
           onPressed: () {
-            // TODO: 实现搜索功能
+            // Do nothing, only a placeholder
           },
           tooltip: '搜索',
         ),
@@ -45,7 +45,7 @@ class CustomAppBar {
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
               onPressed: () {
-                // TODO: 实现通知功能
+                // Do nothing, only a placeholder
               },
               tooltip: '通知',
             ),
@@ -115,7 +115,7 @@ class CustomAppBar {
             );
           },
         ),
-        const SizedBox(width: AppThemeData.spacingSmall),
+        const SizedBox(width: AppThemeData.spacingMedium),
       ],
     );
   }

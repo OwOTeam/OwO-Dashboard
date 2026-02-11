@@ -33,8 +33,12 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: AppConstants.appName,
             debugShowCheckedModeBanner: false,
-            theme: themeProvider.currentTheme.generateLightTheme(),
-            darkTheme: themeProvider.currentTheme.generateDarkTheme(),
+            theme: themeProvider.currentTheme.generateLightTheme(
+              adjustment: themeProvider.lightContrastAdjustment,
+            ),
+            darkTheme: themeProvider.currentTheme.generateDarkTheme(
+              adjustment: themeProvider.darkContrastAdjustment,
+            ),
             themeMode: themeProvider.themeMode,
             home: const MainScreen(),
           );

@@ -29,6 +29,7 @@ class ThemeSettingsPage extends StatelessWidget {
                     icon: const Icon(Icons.arrow_back),
                     onPressed: onBack,
                   ),
+                  const SizedBox(width: AppThemeData.spacingSmall),
                   Text('主题设置', style: theme.textTheme.headlineMedium),
                 ],
               ),
@@ -61,10 +62,112 @@ class ThemeSettingsPage extends StatelessWidget {
           const _CustomThemeSection(),
           const SizedBox(height: AppThemeData.spacingLarge),
 
+          // 对比度调整
+          const _ContrastAdjustmentSection(),
+          const SizedBox(height: AppThemeData.spacingLarge),
+
           // 设计常量示例（可选）
           const _DesignConstantsSection(),
           const SizedBox(height: AppThemeData.spacingLarge),
         ],
+      ),
+    );
+  }
+}
+
+/// 对比度调整（亮度/昏暗度）
+class _ContrastAdjustmentSection extends StatelessWidget {
+  const _ContrastAdjustmentSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ThemeProvider>();
+    final theme = Theme.of(context);
+    final isDark =
+        provider.isDarkMode ||
+        (provider.isSystemMode &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppThemeData.spacingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('对比度调整', style: theme.textTheme.headlineMedium),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isDark ? '深色增强' : '浅色净化',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppThemeData.spacingSmall),
+            Text(
+              isDark
+                  ? '调整深色模式下的背景深度，数值越大背景越接近纯黑。'
+                  : '调整浅色模式下的背景深度，数值越大背景越接近深灰。',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppThemeData.spacingMedium),
+            Row(
+              children: [
+                Icon(
+                  isDark ? Icons.brightness_medium : Icons.wb_sunny_outlined,
+                  size: 20,
+                ),
+                Expanded(
+                  child: Slider(
+                    value: isDark
+                        ? provider.darkContrastAdjustment
+                        : provider.lightContrastAdjustment,
+                    min: 0.0,
+                    max: 1.0,
+                    divisions: 10,
+                    label:
+                        '${((isDark ? provider.darkContrastAdjustment : provider.lightContrastAdjustment) * 100).toInt()}%',
+                    onChanged: (value) {
+                      if (isDark) {
+                        provider.setDarkContrastAdjustment(value);
+                      } else {
+                        provider.setLightContrastAdjustment(value);
+                      }
+                    },
+                  ),
+                ),
+                Icon(isDark ? Icons.brightness_low : Icons.wb_sunny, size: 20),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('默认', style: theme.textTheme.bodySmall),
+                  Text(
+                    isDark ? '极致深邃' : '透明纯净',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

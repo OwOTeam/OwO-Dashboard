@@ -9,9 +9,13 @@ import 'app_theme_data.dart';
 class ThemeProvider extends ChangeNotifier {
   static const String _themeModeKey = 'theme_mode';
   static const String _currentThemeKey = 'current_theme';
+  static const String _lightContrastKey = 'light_contrast_adjustment';
+  static const String _darkContrastKey = 'dark_contrast_adjustment';
 
   ThemeMode _themeMode = ThemeMode.system;
   AppThemeData _currentTheme;
+  double _lightContrastAdjustment = 0.0;
+  double _darkContrastAdjustment = 0.0;
 
   ThemeProvider({
     AppThemeData? initialTheme,
@@ -26,6 +30,16 @@ class ThemeProvider extends ChangeNotifier {
   AppThemeData get currentTheme => _currentTheme;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   bool get isSystemMode => _themeMode == ThemeMode.system;
+  double get lightContrastAdjustment => _lightContrastAdjustment;
+  double get darkContrastAdjustment => _darkContrastAdjustment;
+
+  /// 获取当前活跃模式下的对比度调整值
+  double get currentContrastAdjustment {
+    if (_themeMode == ThemeMode.light) return _lightContrastAdjustment;
+    if (_themeMode == ThemeMode.dark) return _darkContrastAdjustment;
+    // 如果是跟随系统，则根据当前系统亮度返回
+    return _darkContrastAdjustment; // 默认深色
+  }
 
   // ============ 主题配色切换（新增功能）============
 
@@ -87,6 +101,22 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
+  /// 设置亮色模式对比度调整
+  Future<void> setLightContrastAdjustment(double level) async {
+    if (_lightContrastAdjustment == level) return;
+    _lightContrastAdjustment = level.clamp(0.0, 1.0);
+    notifyListeners();
+    await _saveToPreferences();
+  }
+
+  /// 设置深色模式对比度调整
+  Future<void> setDarkContrastAdjustment(double level) async {
+    if (_darkContrastAdjustment == level) return;
+    _darkContrastAdjustment = level.clamp(0.0, 1.0);
+    notifyListeners();
+    await _saveToPreferences();
+  }
+
   /// 获取主题模式的显示名称
   String getThemeModeName(ThemeMode mode) {
     switch (mode) {
@@ -126,6 +156,10 @@ class ThemeProvider extends ChangeNotifier {
 
       // 保存主题模式
       await prefs.setInt(_themeModeKey, _themeMode.index);
+
+      // 保存设置
+      await prefs.setDouble(_lightContrastKey, _lightContrastAdjustment);
+      await prefs.setDouble(_darkContrastKey, _darkContrastAdjustment);
     } catch (e) {
       debugPrint('保存主题设置失败: $e');
     }
@@ -148,6 +182,10 @@ class ThemeProvider extends ChangeNotifier {
         _themeMode = ThemeMode.values[themeModeIndex];
       }
 
+      // 加载设置
+      _lightContrastAdjustment = prefs.getDouble(_lightContrastKey) ?? 0.0;
+      _darkContrastAdjustment = prefs.getDouble(_darkContrastKey) ?? 0.0;
+
       notifyListeners();
     } catch (e) {
       debugPrint('加载主题设置失败: $e');
@@ -161,6 +199,8 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> resetToDefault() async {
     _currentTheme = AppThemeData.presetThemes.first;
     _themeMode = ThemeMode.system;
+    _lightContrastAdjustment = 0.0;
+    _darkContrastAdjustment = 0.0;
     notifyListeners();
     await _saveToPreferences();
   }

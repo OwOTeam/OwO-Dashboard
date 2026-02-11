@@ -13,6 +13,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_local_notifications: ^19.5.0
+  google_fonts: ^8.0.1
   http: ^1.6.0
   logger: ^2.6.2
   path_provider: ^2.1.5
@@ -55,3 +56,11 @@ flutter_icons:
   macos:
     generate: false  # 生成macOS图标
     image_path: "assets/icons/app_icon.png"
+
+  fonts:
+    - family: MicrosoftYaHei
+      fonts:
+        - asset: assets/fonts/Microsoft-YaHei-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Microsoft-YaHei-Bold.ttf
+          weight: 700

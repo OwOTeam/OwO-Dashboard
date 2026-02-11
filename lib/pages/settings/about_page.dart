@@ -23,6 +23,7 @@ class AboutPage extends StatelessWidget {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: onBack,
                 ),
+              const SizedBox(width: AppThemeData.spacingSmall),
               Text('关于应用', style: theme.textTheme.headlineMedium),
             ],
           ),
