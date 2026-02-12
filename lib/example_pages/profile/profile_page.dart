@@ -216,7 +216,7 @@ class ProfilePage extends StatelessWidget {
               subtitle: Text(item['subtitle'] as String),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                // TODO: 处理设置项点击
+                // Do nothing
               },
             );
           },

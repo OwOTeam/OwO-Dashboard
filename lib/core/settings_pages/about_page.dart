@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/app_constants.dart';
-import '../../core/theme/app_theme_data.dart';
-import '../../core/utils/url_launcher_helper.dart';
+import '../constants/app_constants.dart';
+import '../theme/app_theme_data.dart';
+import '../utils/url_launcher_helper.dart';
 
 /// 关于应用页面
 class AboutPage extends StatelessWidget {

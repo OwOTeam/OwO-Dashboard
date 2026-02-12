@@ -62,7 +62,7 @@ class ExplorePage extends StatelessWidget {
         label: Text(label),
         selected: isSelected,
         onSelected: (selected) {
-          // TODO: 处理分类选择
+          // Do nothing
         },
         backgroundColor: theme.scaffoldBackgroundColor,
         selectedColor: theme.colorScheme.primary.withValues(alpha: 0.2),

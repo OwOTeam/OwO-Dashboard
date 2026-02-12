@@ -13,19 +13,111 @@ import 'core/models/navigation_item.dart';
 import 'core/widgets/common/dialog.dart';
 import 'core/widgets/desktop/custom_title_bar.dart';
 import 'core/services/notification_service.dart';
-import 'pages/explore/explore_page.dart';
-import 'pages/home/home_page.dart';
-import 'pages/messages/messages_page.dart';
-import 'pages/notifications/notification_demo_page.dart';
-import 'pages/notifications/notifications_page.dart';
-import 'pages/profile/profile_page.dart';
-import 'pages/settings/settings_page.dart';
+import 'core/settings_pages/settings_page.dart';
+import 'core/utils/logger.dart';
 
-class MyApp extends StatelessWidget {
+// 示例页面, 后续开发可删除
+import 'example_pages/explore/explore_page.dart';
+import 'example_pages/home/home_page.dart';
+import 'example_pages/messages/messages_page.dart';
+import 'example_pages/notifications/notification_demo_page.dart';
+import 'example_pages/notifications/notifications_page.dart';
+import 'example_pages/profile/profile_page.dart';
+
+import 'core/services/persistence_service.dart';
+import 'core/setup_wizard/setup_wizard.dart';
+
+import 'core/module_registry/module_registry.dart';
+import 'modules/my_settings_pages/my_settings_pages_module.dart';
+import 'modules/my_wizard_steps/my_wizard_steps_module.dart';
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _isSetupMode = true;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  /// 初始化应用程序入口
+  ///
+  /// 在应用启动时调用此函数以初始化应用程序
+  Future<void> _initializeApp() async {
+    try {
+      // 1. 尝试初始化持久化服务（使用默认路径检查之前的配置）
+      final persistence = PersistenceService();
+      await persistence.init();
+      final configuredPath = persistence.getString('data_root_path');
+      if (configuredPath != null && configuredPath != persistence.rootPath) {
+        await persistence.init(customPath: configuredPath);
+      }
+      await AppLogger.init();
+
+      // 2. 初始化所有模块
+      final registry = ModuleRegistry();
+      // 注册向导步骤模块
+      registry.registerModule(MyWizardStepsModule());
+      // 注册设置页面模块
+      registry.registerModule(MySettingsPagesModule());
+      // 初始化所有模块
+      registry.initializeAll();
+
+      // 3. 初始化通知服务
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+
+      // Add this line to override the default close handler
+      await windowManager.setPreventClose(true);
+
+      if (mounted) {
+        setState(() {
+          _isSetupMode = persistence.get<bool>(
+            'is_first_launch',
+            defaultValue: true,
+          )!;
+          _isInitialized = true;
+        });
+      }
+    } catch (e, s) {
+      AppLogger.error('App Initialization failed', e, s);
+      // Fallback or show error? For now proceed to allow retry or debug
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => ThemeProvider())],
       child: Consumer<ThemeProvider>(
@@ -40,7 +132,12 @@ class MyApp extends StatelessWidget {
               adjustment: themeProvider.darkContrastAdjustment,
             ),
             themeMode: themeProvider.themeMode,
-            home: const MainScreen(),
+            home: _isSetupMode
+                ? SetupWizard(
+                    key: ValueKey(_isSetupMode),
+                    onCompleted: () => setState(() => _isSetupMode = false),
+                  )
+                : const MainScreen(),
           );
         },
       ),
@@ -58,8 +155,8 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with WindowListener {
   int _selectedIndex = 0;
 
-  // 定义导航项
-  final List<NavigationItem> _navigationItems = const [
+  // 示例页面, 后续开发可删除
+  final List<NavigationItem> _exampleNavigationItems = const [
     NavigationItem(
       id: 'home',
       title: '首页',
@@ -104,6 +201,10 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       activeIcon: Icons.person,
       page: ProfilePage(),
     ),
+  ];
+
+  // 定义导航项
+  final List<NavigationItem> _coreNavigationItems = const [
     NavigationItem(
       id: 'settings',
       title: '设置',
@@ -117,37 +218,20 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   void initState() {
     super.initState();
     windowManager.addListener(this);
-
-    _initializeApp();
-    setState(() {});
-  }
-
-  /// 初始化应用
-  Future<void> _initializeApp() async {
-    // +++ App Core 核心服务/组件初始化开始 +++
-
-    // 初始化通知服务
-    final notificationService = NotificationService();
-    await notificationService.initialize();
-
-    // Add this line to override the default close handler
-    await windowManager.setPreventClose(true);
-
-    // +++ App Core 核心服务/组件初始化结束 +++
   }
 
   /// 集中处理关闭前的清理工作
   Future<void> _handleAppCleanup() async {
     try {
       // 在这里集中处理所有需要最后保存或清理的操作
-      debugPrint('开始执行应用清理操作...');
+      AppLogger.info('开始执行应用清理操作...');
 
       // 清理通知服务资源
       await NotificationService().dispose();
 
-      debugPrint('应用清理完成。');
+      AppLogger.info('应用清理完成。');
     } catch (e) {
-      debugPrint('清理过程中出错: $e');
+      AppLogger.error('清理过程中出错: $e');
     }
   }
 
@@ -172,6 +256,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
   @override
   Widget build(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final navigationItems = _exampleNavigationItems + _coreNavigationItems;
     return Column(
       children: [
         if (!Platform.isAndroid && !Platform.isIOS) ...[
@@ -182,13 +267,13 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
           child: Responsive(
             // 移动端布局
             mobile: MobileLayout(
-              navigationItems: _navigationItems,
+              navigationItems: navigationItems,
               selectedIndex: _selectedIndex,
               onNavigationChanged: _onNavigationChanged,
             ),
             // 桌面端布局
             desktop: DesktopLayout(
-              navigationItems: _navigationItems,
+              navigationItems: navigationItems,
               selectedIndex: _selectedIndex,
               onNavigationChanged: _onNavigationChanged,
             ),

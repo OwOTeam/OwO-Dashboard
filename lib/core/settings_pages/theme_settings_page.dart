@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 
-import '../../core/theme/app_theme_data.dart';
-import '../../core/theme/theme_provider.dart';
-import '../../core/widgets/common/snack_bar.dart';
+import '../theme/app_theme_data.dart';
+import '../theme/theme_provider.dart';
+import '../widgets/common/snack_bar.dart';
 
 /// 统一的主题设置页面
 class ThemeSettingsPage extends StatelessWidget {

@@ -151,7 +151,7 @@ class MessagesPage extends StatelessWidget {
               )
             : null,
         onTap: () {
-          // TODO: 打开消息详情
+          // Do nothing
         },
       ),
     );

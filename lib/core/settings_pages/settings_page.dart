@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme_data.dart';
+import '../theme/app_theme_data.dart';
 import 'theme_settings_page.dart';
 import 'about_page.dart';
+import 'general_settings_page.dart';
+import 'settings_page_registry.dart';
 
 /// 设置项配置模型
 class SettingsItem {
@@ -33,22 +35,58 @@ class _SettingsPageState extends State<SettingsPage> {
   String _currentRoute = 'main';
 
   // 智能注册子页面列表
-  late final List<SettingsItem> _settingsItems = [
-    SettingsItem(
-      title: '主题设置',
-      subtitle: '自定义应用的主题颜色和显示模式',
-      icon: Icons.palette_outlined,
-      routeKey: 'theme',
-      builder: (onBack) => ThemeSettingsPage(onBack: onBack),
-    ),
-    SettingsItem(
-      title: '关于应用',
-      subtitle: '查看应用版本、开发者信息和许可协议',
-      icon: Icons.info_outline,
-      routeKey: 'about',
-      builder: (onBack) => AboutPage(onBack: onBack),
-    ),
-  ];
+  late final List<SettingsItem> _settingsItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _settingsItems = _buildSettingsItems();
+  }
+
+  List<SettingsItem> _buildSettingsItems() {
+    final items = <SettingsItem>[
+      // 核心设置页面
+      SettingsItem(
+        title: '常规设置',
+        subtitle: '管理应用存储路径及基本行为',
+        icon: Icons.settings_applications_outlined,
+        routeKey: 'general',
+        builder: (onBack) => GeneralSettingsPage(onBack: onBack),
+      ),
+      SettingsItem(
+        title: '主题设置',
+        subtitle: '自定义应用的主题颜色和显示模式',
+        icon: Icons.palette_outlined,
+        routeKey: 'theme',
+        builder: (onBack) => ThemeSettingsPage(onBack: onBack),
+      ),
+      SettingsItem(
+        title: '关于应用',
+        subtitle: '查看应用版本、开发者信息和许可协议',
+        icon: Icons.info_outline,
+        routeKey: 'about',
+        builder: (onBack) => AboutPage(onBack: onBack),
+      ),
+    ];
+
+    // 从注册表加载自定义设置页面
+    final registry = SettingsPageRegistry();
+    final customPages = registry.getAllPages();
+
+    for (final page in customPages) {
+      items.add(
+        SettingsItem(
+          title: page.title,
+          subtitle: page.description ?? '',
+          icon: page.icon,
+          routeKey: page.id,
+          builder: (onBack) => _CustomPageWrapper(page: page, onBack: onBack),
+        ),
+      );
+    }
+
+    return items;
+  }
 
   void _navigateTo(String route) {
     setState(() {
@@ -188,6 +226,33 @@ class _SettingsMenuCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 自定义页面包装器，提供返回按钮支持
+class _CustomPageWrapper extends StatelessWidget {
+  final dynamic page;
+  final VoidCallback onBack;
+
+  const _CustomPageWrapper({required this.page, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(AppThemeData.spacingMedium),
+      children: [
+        Row(
+          children: [
+            IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
+            const SizedBox(width: AppThemeData.spacingSmall),
+            Text(page.title, style: theme.textTheme.headlineMedium),
+          ],
+        ),
+        const SizedBox(height: AppThemeData.spacingLarge),
+        page.build(context),
+      ],
     );
   }
 }
