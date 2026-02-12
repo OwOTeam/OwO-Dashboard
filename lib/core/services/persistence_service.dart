@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../constants/app_constants.dart';
 import '../utils/logger.dart';
 
 /// App 内置持久化存储系统
@@ -19,15 +20,28 @@ class PersistenceService {
   bool get isInitialized => _initialized;
   String? get rootPath => _rootPath;
 
+  /// 清洗路径名称，去除特殊字符
+  static String sanitizeDirectoryName(String name) {
+    // 允许字母、数字、空格、下划线、连字符、点
+    // 过滤掉 Windows/Linux 不允许的字符: < > : " / \ | ? *
+    return name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '').trim();
+  }
+
+  /// 获取处理后的存储根路径（追加 AppName）
+  static String getProcessedRootPath(String baseDir) {
+    final sanitizedAppName = sanitizeDirectoryName(AppConstants.appName);
+    return p.join(baseDir, sanitizedAppName);
+  }
+
   /// 初始化存储系统
   /// [customPath] 如果提供，则使用该路径存储数据；否则使用默认的应用文档目录
   Future<void> init({String? customPath}) async {
     if (customPath != null) {
-      _rootPath = customPath;
+      _rootPath = getProcessedRootPath(customPath);
     } else {
       // 默认路径：Documents/OwODashboard
       final appDocDir = await getApplicationDocumentsDirectory();
-      _rootPath = p.join(appDocDir.path, 'OwODashboard');
+      _rootPath = getProcessedRootPath(appDocDir.path);
     }
 
     try {
@@ -162,9 +176,7 @@ class PersistenceService {
             try {
               await rootDir.delete();
             } catch (e) {
-              AppLogger.warning(
-                '无法删除数据目录（可能包含同步文件）: $_rootPath',
-              );
+              AppLogger.warning('无法删除数据目录（可能包含同步文件）: $_rootPath');
             }
           } catch (e) {
             AppLogger.warning('清除数据目录失败: $e');

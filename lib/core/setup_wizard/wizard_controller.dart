@@ -83,11 +83,15 @@ class WizardController extends ChangeNotifier {
   Future<void> _complete() async {
     if (_selectedPath != null) {
       await _steps[_currentStep].onComplete();
+
+      // 使用 PersistenceService 统一处理路径（追加 AppName 并清洗）
       await PersistenceService().init(customPath: _selectedPath);
+
       await PersistenceService().setBool('log_enabled', _logEnabled);
       await AppLogger.init();
       await PersistenceService().setBool('is_first_launch', false);
       await PersistenceService().setString('data_root_path', _selectedPath!);
+
       _isCompleted = true;
       notifyListeners();
       onCompleted?.call();
