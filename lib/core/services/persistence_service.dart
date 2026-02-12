@@ -30,6 +30,10 @@ class PersistenceService {
   /// 获取处理后的存储根路径（追加 AppName）
   static String getProcessedRootPath(String baseDir) {
     final sanitizedAppName = sanitizeDirectoryName(AppConstants.appName);
+    // 如果 baseDir 已经是以 sanitizedAppName 结尾，则不再追加
+    if (p.basename(baseDir) == sanitizedAppName) {
+      return baseDir;
+    }
     return p.join(baseDir, sanitizedAppName);
   }
 

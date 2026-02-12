@@ -84,13 +84,20 @@ class WizardController extends ChangeNotifier {
     if (_selectedPath != null) {
       await _steps[_currentStep].onComplete();
 
-      // 使用 PersistenceService 统一处理路径（追加 AppName 并清洗）
+      // 1. 初始化持久化服务（内部会自动处理追加 AppName 和清洗）
       await PersistenceService().init(customPath: _selectedPath);
 
+      // 2. 获取最终生效的完整路径
+      final finalRootPath = PersistenceService().rootPath!;
+
+      // 3. 保存配置
       await PersistenceService().setBool('log_enabled', _logEnabled);
-      await AppLogger.init();
       await PersistenceService().setBool('is_first_launch', false);
-      await PersistenceService().setString('data_root_path', _selectedPath!);
+      // 注意：这里保存的是最终生成的完整路径，确保下次启动时能正确定位
+      await PersistenceService().setString('data_root_path', finalRootPath);
+
+      // 4. 初始化日志
+      await AppLogger.init();
 
       _isCompleted = true;
       notifyListeners();

@@ -44,15 +44,16 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     );
 
     if (result == true) {
-      // 存储原始选择的父目录路径
-      await PersistenceService().set('data_root_path', newPath);
-      
       // PersistenceService().init 内部会自动处理追加 AppName 和清洗特殊字符
       await PersistenceService().init(customPath: newPath);
+      final finalPath = PersistenceService().rootPath!;
+
+      // 存储最终生成的完整路径
+      await PersistenceService().set('data_root_path', finalPath);
       await AppLogger.init();
 
       setState(() {
-        _currentPath = PersistenceService().rootPath;
+        _currentPath = finalPath;
       });
 
       if (mounted) {
