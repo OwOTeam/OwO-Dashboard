@@ -25,6 +25,7 @@ import 'example_pages/notifications/notifications_page.dart';
 import 'example_pages/profile/profile_page.dart';
 
 import 'core/services/persistence_service.dart';
+import 'core/services/font_service.dart';
 import 'core/setup_wizard/setup_wizard.dart';
 
 import 'core/module_registry/module_registry.dart';
@@ -62,7 +63,10 @@ class _MyAppState extends State<MyApp> {
       }
       await AppLogger.init();
 
-      // 2. 初始化所有模块
+      // 2. 初始化字体服务（如果已配置路径，则加载动态字体）
+      await FontService().initialize();
+
+      // 3. 初始化所有模块
       final registry = ModuleRegistry();
       // 注册向导步骤模块
       registry.registerModule(MyWizardStepsModule());

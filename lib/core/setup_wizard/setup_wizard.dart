@@ -11,6 +11,7 @@ import 'steps/storage_path_step.dart';
 import 'steps/log_settings_step.dart';
 import 'steps/summary_step.dart';
 import 'wizard_step_registry.dart';
+import '../services/font_service.dart';
 
 class SetupWizard extends StatefulWidget {
   final VoidCallback? onCompleted;
@@ -58,7 +59,10 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
     setState(() {}); // Rebuild to reflect controller changes
   }
 
-  void _onWizardCompleted() {
+  void _onWizardCompleted() async {
+    // 迁移并加载字体资源
+    await FontService().initialize();
+
     setState(() {
       _showCompletionAnimation = true;
     });
