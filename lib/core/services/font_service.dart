@@ -84,6 +84,31 @@ class FontService {
       if (movedCount > 0) {
         AppLogger.info('FontService: Successfully migrated $movedCount fonts.');
       }
+
+      // 迁移完成后，安全删除源目录以避免产生数据垃圾
+      if (await sourceDir.exists()) {
+        try {
+          // 再次检查目录是否为空（或者只剩下我们无法移动的东西）
+          final remaining = await sourceDir.list().toList();
+          if (remaining.isEmpty) {
+            await sourceDir.delete();
+            AppLogger.info(
+              'FontService: Cleaned up source directory: ${sourceDir.path}',
+            );
+          } else {
+            // 如果还有文件，尝试递归删除
+            await sourceDir.delete(recursive: true);
+            AppLogger.info(
+              'FontService: Recursively cleaned up source directory: ${sourceDir.path}',
+            );
+          }
+        } catch (e) {
+          AppLogger.warning(
+            'FontService: Failed to delete source directory: $e',
+          );
+        }
+      }
+
       _isMigrated = true;
     } catch (e, s) {
       AppLogger.error('FontService: Font migration failed', e, s);
