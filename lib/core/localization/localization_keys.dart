@@ -151,6 +151,14 @@ class LocalizationKeys {
 
   // Common UI Tooltips
   static const String themeSettingsTooltip = 'theme_settings_tooltip';
+  static const String back = 'back';
+  static const String close = 'close';
+  static const String appLogo = 'app_logo';
+  static const String windowMinimize = 'window_minimize';
+  static const String windowMaximize = 'window_maximize';
+  static const String windowRestore = 'window_restore';
+  static const String windowClose = 'window_close';
+  static const String badgeLabel = 'badge_label';
 
   // Bootstrap Config
   static const String bootstrapConfig = 'bootstrap_config';

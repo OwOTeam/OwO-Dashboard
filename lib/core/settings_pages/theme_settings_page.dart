@@ -31,6 +31,7 @@ class ThemeSettingsPage extends StatelessWidget {
                   if (onBack != null)
                     IconButton(
                       icon: const Icon(Icons.arrow_back),
+                      tooltip: LocalizationKeys.back.tr(context),
                       onPressed: onBack,
                     ),
                   const SizedBox(width: AppThemeData.spacingSmall),
