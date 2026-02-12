@@ -6,7 +6,6 @@ import 'core/utils/logger.dart';
 
 void main() async {
   try {
-    AppLogger.info('Application started');
     WidgetsFlutterBinding.ensureInitialized();
     await windowManager.ensureInitialized();
 
@@ -18,6 +17,7 @@ void main() async {
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
     );
+
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();

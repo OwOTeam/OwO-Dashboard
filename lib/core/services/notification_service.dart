@@ -9,7 +9,7 @@
  *  Copyright (c) 2023 by OwOTeam-DGMT (OwOBlog).
  * @Date         : 2025-12-18
  * @Author       : HanskiJay
- * @LastEditors  : Claude AI
+ * @LastEditors  : HanskiJay
  * @LastEditTime : 2025-12-18
  * @E-Mail       : support@owoblog.com
  * @GitHub       : https://github.com/Tommy131
@@ -24,10 +24,11 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'persistence_service.dart';
 import 'dart:convert';
 
 import '../constants/app_constants.dart';
+import '../utils/logger.dart';
 
 // ==================== 数据模型 ====================
 
@@ -233,7 +234,6 @@ class NotificationService {
   final List<DateTime> _recentNotificationTimes = [];
 
   /// 本地存储
-  SharedPreferences? _prefs;
 
   // ==================== 初始化方法 ====================
 
@@ -255,10 +255,12 @@ class NotificationService {
     if (_initialized) return true;
 
     try {
-      debugPrint('🔄 开始初始化通知服务...');
+      AppLogger.info('🔄 开始初始化通知服务...');
 
-      // 1. 初始化本地存储
-      _prefs = await SharedPreferences.getInstance();
+      // 1. 初始化持久化服务已经由主应用完成，这里只需确保 PersistenceService 已就绪
+      if (!PersistenceService().isInitialized) {
+        await PersistenceService().init();
+      }
 
       // 2. 初始化时区数据（定时通知必需）
       if (!_timeZoneInitialized) {
@@ -291,7 +293,7 @@ class NotificationService {
       );
 
       if (result != true) {
-        debugPrint('⚠️ 通知插件初始化返回 false');
+        AppLogger.warning('通知插件初始化返回 false');
       }
 
       // 5. 请求各平台权限
@@ -301,11 +303,11 @@ class NotificationService {
       await _loadHistory();
 
       _initialized = true;
-      debugPrint('✅ 通知服务初始化成功');
+      AppLogger.info('通知服务初始化成功');
       return true;
     } catch (e, stackTrace) {
-      debugPrint('❌ 通知服务初始化失败: $e');
-      debugPrint('堆栈: $stackTrace');
+      AppLogger.error('通知服务初始化失败: $e', e, stackTrace);
+      AppLogger.error('堆栈: $stackTrace');
       return false;
     }
   }
@@ -375,10 +377,10 @@ class NotificationService {
         );
 
         if (await file.exists()) {
-          debugPrint('✅ 已准备 Windows 通知图标 (绝对路径): ${file.absolute.path}');
+          AppLogger.info('已准备 Windows 通知图标 (绝对路径): ${file.absolute.path}');
           return file.absolute.path;
         } else {
-          debugPrint('❌ Windows 通知图标写入失败');
+          AppLogger.error('Windows 通知图标写入失败');
           return null;
         }
       },
@@ -425,12 +427,12 @@ class NotificationService {
       // 请求精确闹钟权限（定时通知需要）
       final alarmGranted = await androidPlugin.requestExactAlarmsPermission();
 
-      debugPrint(
-        '✅ Android 权限请求完成 - 通知: $notificationGranted, 闹钟: $alarmGranted',
+      AppLogger.info(
+        'Android 权限请求完成 - 通知: $notificationGranted, 闹钟: $alarmGranted',
       );
       return notificationGranted == true;
     } catch (e) {
-      debugPrint('⚠️ Android 权限请求失败: $e');
+      AppLogger.warning('Android 权限请求失败: $e');
       return false;
     }
   }
@@ -457,10 +459,10 @@ class NotificationService {
         badge: true,
         sound: true,
       );
-      debugPrint('✅ iOS 权限请求完成: ${granted == true ? "已授权" : "已拒绝"}');
+      AppLogger.info('iOS 权限请求完成: ${granted == true ? "已授权" : "已拒绝"}');
       return granted;
     } catch (e) {
-      debugPrint('⚠️ iOS 权限请求失败: $e');
+      AppLogger.warning('iOS 权限请求失败: $e');
       return null;
     }
   }
@@ -470,7 +472,7 @@ class NotificationService {
   /// 返回 [bool] 是否已授予权限
   Future<bool> checkPermissions() async {
     if (!_initialized) {
-      debugPrint('⚠️ 服务未初始化，无法检查权限');
+      AppLogger.warning('服务未初始化，无法检查权限');
       return false;
     }
 
@@ -502,7 +504,7 @@ class NotificationService {
       );
       return granted ?? false;
     } catch (e) {
-      debugPrint('⚠️ 检查 iOS 权限失败: $e');
+      AppLogger.warning('检查 iOS 权限失败: $e');
       return false;
     }
   }
@@ -516,7 +518,7 @@ class NotificationService {
   /// 示例:
   /// ```dart
   /// service.registerActionCallback('confirm', (response) {
-  ///   print('用户点击了确认按钮');
+  ///   AppLogger.info('用户点击了确认按钮');
   /// });
   /// ```
   void registerActionCallback(
@@ -524,19 +526,19 @@ class NotificationService {
     Function(NotificationResponse) callback,
   ) {
     _actionCallbacks[actionId] = callback;
-    debugPrint('✅ 注册 Action 回调: $actionId');
+    AppLogger.info('注册 Action 回调: $actionId');
   }
 
   /// 移除特定 action 的回调
   void unregisterActionCallback(String actionId) {
     _actionCallbacks.remove(actionId);
-    debugPrint('✅ 移除 Action 回调: $actionId');
+    AppLogger.info('移除 Action 回调: $actionId');
   }
 
   /// 清除所有 action 回调
   void clearActionCallbacks() {
     _actionCallbacks.clear();
-    debugPrint('✅ 清除所有 Action 回调');
+    AppLogger.info('清除所有 Action 回调');
   }
 
   /// 通知点击回调
@@ -567,7 +569,7 @@ class NotificationService {
         }
       }
 
-      debugPrint('''
+      AppLogger.info('''
 📱 通知交互:
    - ID: ${notificationId ?? 'null'}
    - Action: ${actionId ?? '点击通知'}
@@ -588,8 +590,8 @@ class NotificationService {
         onNotificationTapped?.call(response);
       }
     } catch (e, stackTrace) {
-      debugPrint('❌ 处理通知点击失败: $e');
-      debugPrint('堆栈: $stackTrace');
+      AppLogger.error('处理通知点击失败: $e', e, stackTrace);
+      AppLogger.error('堆栈: $stackTrace');
     }
   }
 
@@ -696,7 +698,7 @@ class NotificationService {
         _recordNotificationTime(id);
         _createNotificationState(id, title, body, payload);
 
-        if (logMessage != null) debugPrint(logMessage);
+        if (logMessage != null) AppLogger.info(logMessage);
         return true;
       },
       operationName,
@@ -713,8 +715,8 @@ class NotificationService {
     // 检查单个通知的限流（500ms 内不能重复）
     final lastTime = _lastNotificationTime[id];
     if (lastTime != null && now.difference(lastTime) < _rateLimitDuration) {
-      debugPrint(
-        '⚠️ 通知 $id 被限流（距上次发送 ${now.difference(lastTime).inMilliseconds}ms）',
+      AppLogger.warning(
+        '通知 $id 被限流（距上次发送 ${now.difference(lastTime).inMilliseconds}ms）',
       );
       return true;
     }
@@ -725,7 +727,7 @@ class NotificationService {
     );
 
     if (_recentNotificationTimes.length >= _maxNotificationsPerMinute) {
-      debugPrint('⚠️ 达到每分钟通知上限（$_maxNotificationsPerMinute 条）');
+      AppLogger.warning('达到每分钟通知上限（$_maxNotificationsPerMinute 条）');
       return true;
     }
 
@@ -772,7 +774,7 @@ class NotificationService {
     if (state != null && !state.isRead) {
       _notificationStates[id] = state.copyWith(readAt: DateTime.now());
       _saveHistory();
-      debugPrint('✅ 通知 $id 标记为已读');
+      AppLogger.info('通知 $id 标记为已读');
     }
   }
 
@@ -785,7 +787,7 @@ class NotificationService {
         readAt: state.readAt ?? DateTime.now(),
       );
       _saveHistory();
-      debugPrint('✅ 通知 $id 标记为已点击');
+      AppLogger.info('通知 $id 标记为已点击');
     }
   }
 
@@ -813,34 +815,39 @@ class NotificationService {
       final historyJson = _notificationStates.values
           .map((state) => state.toJson())
           .toList();
-      await _prefs?.setString(_notificationHistoryKey, jsonEncode(historyJson));
+      await PersistenceService().set(
+        _notificationHistoryKey,
+        jsonEncode(historyJson),
+      );
     } catch (e) {
-      debugPrint('⚠️ 保存通知历史失败: $e');
+      AppLogger.warning('保存通知历史失败: $e');
     }
   }
 
   /// 加载通知历史
   Future<void> _loadHistory() async {
     try {
-      final historyString = _prefs?.getString(_notificationHistoryKey);
+      final historyString = PersistenceService().getString(
+        _notificationHistoryKey,
+      );
       if (historyString != null) {
         final List<dynamic> historyJson = jsonDecode(historyString);
         for (var json in historyJson) {
           final state = NotificationState.fromJson(json);
           _notificationStates[state.id] = state;
         }
-        debugPrint('✅ 加载通知历史: ${_notificationStates.length} 条');
+        AppLogger.info('加载通知历史: ${_notificationStates.length} 条');
       }
     } catch (e) {
-      debugPrint('⚠️ 加载通知历史失败: $e');
+      AppLogger.warning('加载通知历史失败: $e');
     }
   }
 
   /// 清除通知历史
   Future<void> clearHistory() async {
     _notificationStates.clear();
-    await _prefs?.remove(_notificationHistoryKey);
-    debugPrint('✅ 清除通知历史');
+    await PersistenceService().remove(_notificationHistoryKey);
+    AppLogger.info('清除通知历史');
   }
 
   /// 清除过期历史（保留最近 30 天）
@@ -850,7 +857,7 @@ class NotificationService {
       (id, state) => state.createdAt.isBefore(cutoffDate),
     );
     await _saveHistory();
-    debugPrint('✅ 清除 $days 天前的通知历史');
+    AppLogger.info('清除 $days 天前的通知历史');
   }
 
   // ==================== 统计功能 ====================
@@ -1111,7 +1118,7 @@ class NotificationService {
 
         try {
           // 下载图片到临时目录
-          debugPrint('📥 开始下载通知图片: $imageUrl');
+          AppLogger.info('📥 开始下载通知图片: $imageUrl');
           final response = await http
               .get(Uri.parse(imageUrl))
               .timeout(const Duration(seconds: 10));
@@ -1127,7 +1134,7 @@ class NotificationService {
           final file = File(filePath);
           await file.writeAsBytes(response.bodyBytes);
 
-          debugPrint('✅ 图片下载成功: $filePath');
+          AppLogger.info('图片下载成功: $filePath');
 
           // 使用本地文件路径显示
           return await showBigPictureNotification(
@@ -1138,7 +1145,7 @@ class NotificationService {
             payload: payload,
           );
         } catch (e) {
-          debugPrint('⚠️ 下载通知图片失败: $e，降级为普通通知');
+          AppLogger.warning('下载通知图片失败: $e，降级为普通通知');
           // 降级为普通通知
           return await showNotification(
             id: id,
@@ -1177,7 +1184,7 @@ class NotificationService {
         await _ensureInitialized();
 
         if (scheduledTime.isBefore(DateTime.now())) {
-          debugPrint('⚠️ 计划时间不能早于当前时间');
+          AppLogger.warning('计划时间不能早于当前时间');
           return false;
         }
 
@@ -1200,7 +1207,7 @@ class NotificationService {
 
         _createNotificationState(id, title, body, payload);
 
-        debugPrint('⏰ 设置定时通知: $title，时间: $scheduledTime');
+        AppLogger.info('⏰ 设置定时通知: $title，时间: $scheduledTime');
         return true;
       },
       '设置定时通知',
@@ -1253,7 +1260,7 @@ class NotificationService {
 
         _createNotificationState(id, title, body, payload);
 
-        debugPrint('🔄 设置周期通知: $title，间隔: $interval');
+        AppLogger.info('🔄 设置周期通知: $title，间隔: $interval');
         return true;
       },
       '设置周期通知',
@@ -1304,7 +1311,7 @@ class NotificationService {
 
         _createNotificationState(id, title, body, payload);
 
-        debugPrint('🔄 设置自定义周期通知: $title，间隔: $interval');
+        AppLogger.info('🔄 设置自定义周期通知: $title，间隔: $interval');
         return true;
       },
       '设置自定义周期通知',
@@ -1383,7 +1390,7 @@ class NotificationService {
   /// ```dart
   /// service.registerActionCallback('reply', (response) {
   ///   final replyText = response.input;
-  ///   print('用户回复: $replyText');
+  ///   AppLogger.info('用户回复: $replyText');
   /// });
   /// ```
   Future<bool> showNotificationWithInlineReply({
@@ -1676,7 +1683,7 @@ class NotificationService {
       }
     }
 
-    debugPrint(
+    AppLogger.info(
       '📮 批量发送 ${notifications.length} 条通知，成功 ${results.where((r) => r).length} 条',
     );
     return results;
@@ -1692,7 +1699,7 @@ class NotificationService {
       () async {
         await _notifications.cancel(id);
         _activeNotificationIds.remove(id);
-        debugPrint('❌ 取消通知: ID=$id');
+        AppLogger.warning('取消通知: ID=$id');
         return true;
       },
       '取消通知',
@@ -1708,7 +1715,7 @@ class NotificationService {
       () async {
         await _notifications.cancelAll();
         _activeNotificationIds.clear();
-        debugPrint('❌ 取消所有通知');
+        AppLogger.warning('取消所有通知');
         return true;
       },
       '取消所有通知',
@@ -1724,7 +1731,7 @@ class NotificationService {
     return await _safeExecute(
       () async {
         final pending = await _notifications.pendingNotificationRequests();
-        debugPrint('📋 待处理通知数量: ${pending.length}');
+        AppLogger.info('📋 待处理通知数量: ${pending.length}');
         return pending;
       },
       '获取待处理通知',
@@ -1765,7 +1772,7 @@ class NotificationService {
 
     if (androidPlugin != null) {
       final notifications = await androidPlugin.getActiveNotifications();
-      debugPrint('📱 Android 活动通知数量: ${notifications.length}');
+      AppLogger.info('📱 Android 活动通知数量: ${notifications.length}');
       return notifications;
     }
     return [];
@@ -1780,7 +1787,7 @@ class NotificationService {
 
     if (iosPlugin != null) {
       final notifications = await iosPlugin.getActiveNotifications();
-      debugPrint('📱 iOS 活动通知数量: ${notifications.length}');
+      AppLogger.info('📱 iOS 活动通知数量: ${notifications.length}');
 
       // 转换为统一的 ActiveNotification 格式
       return notifications
@@ -1817,8 +1824,8 @@ class NotificationService {
     try {
       return await operation();
     } catch (e, stackTrace) {
-      debugPrint('❌ $operationName 失败: $e');
-      debugPrint('堆栈: $stackTrace');
+      AppLogger.error('$operationName 失败: $e', e, stackTrace);
+      AppLogger.error('堆栈: $stackTrace');
       return defaultValue;
     }
   }
@@ -1873,6 +1880,6 @@ class NotificationService {
     _activeNotificationIds.clear();
     _lastNotificationTime.clear();
     _recentNotificationTimes.clear();
-    debugPrint('✅ 通知服务资源已清理');
+    AppLogger.info('通知服务资源已清理');
   }
 }

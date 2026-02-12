@@ -1,8 +1,9 @@
 // theme_provider.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'app_theme_data.dart';
+import '../services/persistence_service.dart';
+import '../utils/logger.dart';
 
 /// 主题管理器（整合版）
 /// 管理应用的主题配色和主题模式（跟随系统、亮色、暗色）
@@ -22,7 +23,7 @@ class ThemeProvider extends ChangeNotifier {
     ThemeMode initialMode = ThemeMode.system,
   }) : _currentTheme = initialTheme ?? AppThemeData.presetThemes.first,
        _themeMode = initialMode {
-    _loadFromPreferences();
+    _loadFromPersistence();
   }
 
   // ============ Getters ============
@@ -49,7 +50,7 @@ class ThemeProvider extends ChangeNotifier {
 
     _currentTheme = theme;
     notifyListeners();
-    await _saveToPreferences();
+    await _saveToPersistence();
   }
 
   /// 创建自定义主题
@@ -77,7 +78,7 @@ class ThemeProvider extends ChangeNotifier {
 
     _themeMode = mode;
     notifyListeners();
-    await _saveToPreferences();
+    await _saveToPersistence();
   }
 
   /// 切换到下一个主题模式（循环切换）
@@ -97,7 +98,7 @@ class ThemeProvider extends ChangeNotifier {
           ? ThemeMode.dark
           : ThemeMode.light;
       notifyListeners();
-      await _saveToPreferences();
+      await _saveToPersistence();
     }
   }
 
@@ -106,7 +107,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_lightContrastAdjustment == level) return;
     _lightContrastAdjustment = level.clamp(0.0, 1.0);
     notifyListeners();
-    await _saveToPreferences();
+    await _saveToPersistence();
   }
 
   /// 设置深色模式对比度调整
@@ -114,7 +115,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_darkContrastAdjustment == level) return;
     _darkContrastAdjustment = level.clamp(0.0, 1.0);
     notifyListeners();
-    await _saveToPreferences();
+    await _saveToPersistence();
   }
 
   /// 获取主题模式的显示名称
@@ -144,51 +145,56 @@ class ThemeProvider extends ChangeNotifier {
   // ============ 持久化存储 ============
 
   /// 保存到本地存储
-  Future<void> _saveToPreferences() async {
+  Future<void> _saveToPersistence() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final persistence = PersistenceService();
+      if (!persistence.isInitialized) return;
 
       // 保存主题配色
-      await prefs.setString(
+      await persistence.setString(
         _currentThemeKey,
         json.encode(_currentTheme.toJson()),
       );
 
       // 保存主题模式
-      await prefs.setInt(_themeModeKey, _themeMode.index);
+      await persistence.setInt(_themeModeKey, _themeMode.index);
 
       // 保存设置
-      await prefs.setDouble(_lightContrastKey, _lightContrastAdjustment);
-      await prefs.setDouble(_darkContrastKey, _darkContrastAdjustment);
+      await persistence.setDouble(_lightContrastKey, _lightContrastAdjustment);
+      await persistence.setDouble(_darkContrastKey, _darkContrastAdjustment);
     } catch (e) {
-      debugPrint('保存主题设置失败: $e');
+      AppLogger.warning('保存主题设置失败: $e');
     }
   }
 
   /// 从本地存储加载
-  Future<void> _loadFromPreferences() async {
+  Future<void> _loadFromPersistence() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final persistence = PersistenceService();
+      // 如果服务尚未初始化，延迟加载或等待
+      // 在应用的主流程中应该保证初始化完成后再使用 ThemeProvider
+      if (!persistence.isInitialized) return;
 
       // 加载主题配色
-      final themeJson = prefs.getString(_currentThemeKey);
+      final themeJson = persistence.getString(_currentThemeKey);
       if (themeJson != null) {
         _currentTheme = AppThemeData.fromJson(json.decode(themeJson));
       }
 
       // 加载主题模式
-      final themeModeIndex = prefs.getInt(_themeModeKey);
+      final themeModeIndex = persistence.getInt(_themeModeKey);
       if (themeModeIndex != null && themeModeIndex < ThemeMode.values.length) {
         _themeMode = ThemeMode.values[themeModeIndex];
       }
 
       // 加载设置
-      _lightContrastAdjustment = prefs.getDouble(_lightContrastKey) ?? 0.0;
-      _darkContrastAdjustment = prefs.getDouble(_darkContrastKey) ?? 0.0;
+      _lightContrastAdjustment =
+          persistence.getDouble(_lightContrastKey) ?? 0.0;
+      _darkContrastAdjustment = persistence.getDouble(_darkContrastKey) ?? 0.0;
 
       notifyListeners();
     } catch (e) {
-      debugPrint('加载主题设置失败: $e');
+      AppLogger.warning('加载主题设置失败: $e');
       // 使用默认值
       _currentTheme = AppThemeData.presetThemes.first;
       _themeMode = ThemeMode.system;
@@ -202,6 +208,6 @@ class ThemeProvider extends ChangeNotifier {
     _lightContrastAdjustment = 0.0;
     _darkContrastAdjustment = 0.0;
     notifyListeners();
-    await _saveToPreferences();
+    await _saveToPersistence();
   }
 }
