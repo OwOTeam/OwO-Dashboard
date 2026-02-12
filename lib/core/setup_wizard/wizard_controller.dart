@@ -21,6 +21,13 @@ class WizardController extends ChangeNotifier {
   int get currentStep => _currentStep;
   int get totalSteps => _steps.length;
   String? get selectedPath => _selectedPath;
+
+  /// 获取处理后的预览路径（追加 AppName）
+  String? get previewPath {
+    if (_selectedPath == null) return null;
+    return PersistenceService.getProcessedRootPath(_selectedPath!);
+  }
+
   bool get logEnabled => _logEnabled;
   bool get isCompleted => _isCompleted;
 

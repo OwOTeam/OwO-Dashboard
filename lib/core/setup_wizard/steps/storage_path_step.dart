@@ -39,7 +39,7 @@ class StoragePathStep extends WizardStep {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         StoragePathTile(
-          currentPath: controller.selectedPath,
+          currentPath: controller.previewPath, // 显示追加后的预览路径
           onPathSelected: (path) => controller.setSelectedPath(path),
         ),
         const SizedBox(height: 24),
