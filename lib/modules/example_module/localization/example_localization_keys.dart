@@ -1,0 +1,29 @@
+class ExampleLocalizationKeys {
+  static const String home = 'example.home';
+  static const String explore = 'example.explore';
+  static const String messages = 'example.messages';
+  static const String notifications = 'example.notifications';
+  static const String notificationDemo = 'example.notification_demo';
+  static const String profile = 'example.profile';
+  static const String welcomeBack = 'example.welcome_back';
+  static const String welcomeDesc = 'example.welcome_desc';
+  static const String startUsing = 'example.start_using';
+  static const String totalUsers = 'example.total_users';
+  static const String activeUsers = 'example.active_users';
+  static const String newMessages = 'example.new_messages';
+  static const String pendingTasks = 'example.pending_tasks';
+  static const String recentActivity = 'example.recent_activity';
+  static const String activityTitle = 'example.activity_title';
+  static const String activityDesc = 'example.activity_desc';
+  static const String minutesAgo = 'example.minutes_ago';
+  static const String exploreTitle = 'example.explore_title';
+  static const String exploreDesc = 'example.explore_desc';
+  static const String sendTestNotification = 'example.send_test_notification';
+  static const String search = 'example.search';
+  static const String notificationsLabel = 'example.notifications_label';
+  static const String defaultUserName = 'example.default_user_name';
+  static const String defaultUserEmail = 'example.default_user_email';
+  static const String exampleWizardStepTitle = 'example.wizard_step_title';
+  static const String exampleSettingsTitle = 'example.settings_title';
+  static const String exampleSettingsDesc = 'example.settings_desc';
+}

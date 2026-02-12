@@ -7,11 +7,14 @@ import 'dart:math';
 import '../constants/app_constants.dart';
 import 'wizard_controller.dart';
 import '../widgets/common/dialog.dart';
+import 'steps/language_step.dart';
 import 'steps/storage_path_step.dart';
 import 'steps/log_settings_step.dart';
 import 'steps/summary_step.dart';
 import 'wizard_step_registry.dart';
 import '../services/font_service.dart';
+import '../services/localization_service.dart';
+import '../localization/localization_keys.dart';
 
 class SetupWizard extends StatefulWidget {
   final VoidCallback? onCompleted;
@@ -39,7 +42,12 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
     );
 
     // 1. 获取核心步骤
-    final coreSteps = [StoragePathStep(), LogSettingsStep(), SummaryStep()];
+    final coreSteps = [
+      LanguageStep(),
+      StoragePathStep(),
+      LogSettingsStep(),
+      SummaryStep(),
+    ];
 
     // 2. 获取注册的自定义步骤
     final customSteps = WizardStepRegistry().getAllSteps();
@@ -96,12 +104,16 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
     // 无论在哪个页面，关闭窗口都需要确认
     final result = await showAdvancedConfirmDialog(
       context: context,
-      title: _showWelcomePage ? '确认退出' : '配置尚未完成',
-      content: _showWelcomePage ? '确定要退出应用吗？' : '退出应用将导致配置丢失，确认要退出吗？',
+      title: _showWelcomePage
+          ? LocalizationKeys.confirm.tr(context)
+          : LocalizationKeys.confirmExitTitle.tr(context),
+      content: _showWelcomePage
+          ? LocalizationKeys.exitConfirmContentWelcome.tr(context)
+          : LocalizationKeys.exitConfirmContentConfig.tr(context),
       icon: Icons.warning_amber_rounded,
       confirmColor: Colors.redAccent,
-      confirmText: '退出',
-      cancelText: '取消',
+      confirmText: LocalizationKeys.confirm.tr(context),
+      cancelText: LocalizationKeys.cancel.tr(context),
     );
 
     if (result == true) {
@@ -131,7 +143,7 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
               ),
               child: _showWelcomePage
                   ? _buildWelcomePage(context)
-                  : _SetupWizardContent(),
+                  : const _SetupWizardContent(),
             ),
             // 完成动画覆盖层
             if (_showCompletionAnimation) _buildCompletionAnimation(context),
@@ -216,7 +228,7 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
                   return Opacity(
                     opacity: value,
                     child: Text(
-                      '一切准备就绪',
+                      LocalizationKeys.allReady.tr(context),
                       style: Theme.of(context).textTheme.headlineMedium
                           ?.copyWith(
                             color: Colors.white,
@@ -234,9 +246,12 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
                 builder: (context, value, child) {
                   return Opacity(
                     opacity: value,
-                    child: const Text(
-                      '正在启动应用...',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    child: Text(
+                      '${LocalizationKeys.loading.tr(context)}...',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
                     ),
                   );
                 },
@@ -301,7 +316,9 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
             const SizedBox(height: 32),
             // 欢迎标题
             Text(
-              '欢迎使用 ${AppConstants.appName}',
+              LocalizationKeys.welcomeTitle
+                  .tr(context)
+                  .replaceFirst('{}', AppConstants.appName),
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -309,17 +326,17 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
             ),
             const SizedBox(height: 16),
             // 描述文本
-            const Text(
-              '在开始之前，我们需要引导您完成一些基础配置。',
+            Text(
+              LocalizationKeys.welcomeDesc.tr(context),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, height: 1.5),
+              style: const TextStyle(color: Colors.grey, height: 1.5),
             ),
             const SizedBox(height: 48),
             // 开始按钮
             FilledButton.icon(
               onPressed: _startConfiguration,
               icon: const Icon(Icons.arrow_forward),
-              label: const Text('开始配置'),
+              label: Text(LocalizationKeys.startConfig.tr(context)),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
@@ -330,7 +347,7 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
             ),
             const SizedBox(height: 16),
             Text(
-              '让我们开始吧！',
+              LocalizationKeys.letsStart.tr(context),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
                 fontStyle: FontStyle.italic,
@@ -349,14 +366,6 @@ class _SetupWizardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<WizardController>();
-
-    if (controller.isCompleted) {
-      // 完成后的回调，通常在 build 之后通过 postFrameCallback 触发导航
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // 重新启动应用或进入主页
-        // 这里假设会在外层监听状态
-      });
-    }
 
     return Center(
       child: Container(
@@ -406,13 +415,13 @@ class _SetupWizardContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '配置引导',
+                  LocalizationKeys.setupGuide.tr(context),
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  controller.currentStepTitle,
+                  controller.currentStepTitle.tr(context),
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
@@ -420,7 +429,9 @@ class _SetupWizardContent extends StatelessWidget {
               ],
             ),
             Text(
-              '还剩 ${controller.remainingItems} 项',
+              LocalizationKeys.remainingItems
+                  .tr(context)
+                  .replaceFirst('{}', controller.remainingItems.toString()),
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: Colors.grey),
@@ -458,7 +469,7 @@ class _SetupWizardContent extends StatelessWidget {
           TextButton.icon(
             onPressed: controller.previousStep,
             icon: const Icon(Icons.arrow_back),
-            label: const Text('上一步'),
+            label: Text(LocalizationKeys.previousStep.tr(context)),
           )
         else
           const SizedBox(),
@@ -466,22 +477,17 @@ class _SetupWizardContent extends StatelessWidget {
           onPressed: controller.canGoNext ? controller.nextStep : null,
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleAtMost(
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
           child: Text(
             controller.currentStep == controller.totalSteps - 1
-                ? '完成初始化'
-                : '下一步',
+                ? LocalizationKeys.finishInitialization.tr(context)
+                : LocalizationKeys.nextStep.tr(context),
           ),
         ),
       ],
     );
   }
-}
-
-// 修正 RoundedRectangleAtMost 为 RoundedRectangleBorder
-class RoundedRectangleAtMost extends RoundedRectangleBorder {
-  const RoundedRectangleAtMost({super.borderRadius});
 }

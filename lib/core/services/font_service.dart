@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../utils/logger.dart';
 import 'persistence_service.dart';
+import 'bootstrap_service.dart';
 
 /// 字体资源管理服务
 /// 负责处理字体文件的迁移（从 Roaming 默认目录到用户配置目录）以及动态加载
@@ -22,10 +23,11 @@ class FontService {
   /// 通常在 SetupWizard 完成后或 App 启动时（如果已配置路径）调用
   Future<void> initialize() async {
     final persistence = PersistenceService();
+    final bootstrap = BootstrapService();
     final rootPath = persistence.rootPath;
 
     // 如果还没有根路径（未初始化完成），则跳过
-    if (rootPath == null || persistence.getString('data_root_path') == null) {
+    if (rootPath == null || bootstrap.getDataPath() == null) {
       AppLogger.info(
         'FontService: No data root path configured, skipping migration.',
       );
@@ -36,7 +38,7 @@ class FontService {
     await loadFonts();
   }
 
-  /// 将字体文件从 Roaming 默认路径迁移到配置路径
+  /// 将字体文件从旧路径迁移到配置路径下的特定目录
   Future<void> migrateFonts() async {
     try {
       final persistence = PersistenceService();
@@ -44,69 +46,63 @@ class FontService {
       if (rootPath == null) return;
 
       final targetFontsDir = Directory(p.join(rootPath, 'assets', 'fonts'));
-
-      // 获取默认的 Roaming 路径 (C:\Users\<user>\AppData\Roaming\com.owoblog\owo_dashboard)
-      final supportDir = await getApplicationSupportDirectory();
-      final sourceDir = supportDir;
-
-      if (!await sourceDir.exists()) {
-        AppLogger.info(
-          'FontService: Source directory does not exist: ${sourceDir.path}',
-        );
-        return;
-      }
-
-      // 确保目标目录存在
       if (!await targetFontsDir.exists()) {
         await targetFontsDir.create(recursive: true);
       }
 
-      AppLogger.info('FontService: Checking for fonts in ${sourceDir.path}');
+      // 我们需要从两个潜在位置检查：
+      // 1. 默认的 Roaming 路径 (可能还没有被 PersistenceService 迁移)
+      // 2. 新的 rootPath 根目录 (可能刚被 PersistenceService 迁移过来，还是散乱状态)
 
-      final entities = await sourceDir.list().toList();
+      final List<Directory> potentialSources = [];
+
+      final supportDir = await getApplicationSupportDirectory();
+      if (await supportDir.exists()) {
+        potentialSources.add(supportDir);
+      }
+
+      final rootDir = Directory(rootPath);
+      if (await rootDir.exists()) {
+        potentialSources.add(rootDir);
+      }
+
       int movedCount = 0;
 
-      for (final entity in entities) {
-        if (entity is File) {
-          final fileName = p.basename(entity.path);
-          final targetFile = File(p.join(targetFontsDir.path, fileName));
+      for (final sourceDir in potentialSources) {
+        // 如果源目录就是目标目录，跳过
+        if (p.equals(sourceDir.path, targetFontsDir.path)) continue;
 
-          // 移动文件 (复制并删除原文件)
-          AppLogger.info(
-            'FontService: Migrating file $fileName to ${targetFile.path}',
-          );
-          await entity.copy(targetFile.path);
-          await entity.delete();
-          movedCount++;
+        AppLogger.info('FontService: Checking for fonts in ${sourceDir.path}');
+
+        final entities = await sourceDir.list().toList();
+        for (final entity in entities) {
+          if (entity is File && entity.path.toLowerCase().endsWith('.ttf')) {
+            final fileName = p.basename(entity.path);
+            final targetFile = File(p.join(targetFontsDir.path, fileName));
+
+            // 移动文件
+            AppLogger.info(
+              'FontService: Migrating font $fileName to ${targetFile.path}',
+            );
+            await entity.copy(targetFile.path);
+            await entity.delete();
+            movedCount++;
+          }
+        }
+
+        // 如果是 Roaming 目录且已空，尝试清理
+        if (sourceDir.path == supportDir.path) {
+          try {
+            final remaining = await sourceDir.list().toList();
+            if (remaining.isEmpty) {
+              await sourceDir.delete();
+            }
+          } catch (_) {}
         }
       }
 
       if (movedCount > 0) {
         AppLogger.info('FontService: Successfully migrated $movedCount fonts.');
-      }
-
-      // 迁移完成后，安全删除源目录以避免产生数据垃圾
-      if (await sourceDir.exists()) {
-        try {
-          // 再次检查目录是否为空（或者只剩下我们无法移动的东西）
-          final remaining = await sourceDir.list().toList();
-          if (remaining.isEmpty) {
-            await sourceDir.delete();
-            AppLogger.info(
-              'FontService: Cleaned up source directory: ${sourceDir.path}',
-            );
-          } else {
-            // 如果还有文件，尝试递归删除
-            await sourceDir.delete(recursive: true);
-            AppLogger.info(
-              'FontService: Recursively cleaned up source directory: ${sourceDir.path}',
-            );
-          }
-        } catch (e) {
-          AppLogger.warning(
-            'FontService: Failed to delete source directory: $e',
-          );
-        }
       }
 
       _isMigrated = true;

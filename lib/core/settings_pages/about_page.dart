@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../constants/app_constants.dart';
 import '../theme/app_theme_data.dart';
 import '../utils/url_launcher_helper.dart';
+import '../localization/localization_keys.dart';
+import '../services/localization_service.dart';
 
 /// 关于应用页面
 class AboutPage extends StatelessWidget {
@@ -11,6 +14,7 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LocalizationService>();
     final theme = Theme.of(context);
     return Scaffold(
       body: ListView(
@@ -24,7 +28,10 @@ class AboutPage extends StatelessWidget {
                   onPressed: onBack,
                 ),
               const SizedBox(width: AppThemeData.spacingSmall),
-              Text('关于应用', style: theme.textTheme.headlineMedium),
+              Text(
+                LocalizationKeys.aboutApp.tr(context),
+                style: theme.textTheme.headlineMedium,
+              ),
             ],
           ),
           const SizedBox(height: AppThemeData.spacingLarge),
@@ -112,22 +119,25 @@ class _AppInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _CardHeader(icon: Icons.info_outline, title: '应用信息'),
+            _CardHeader(
+              icon: Icons.info_outline,
+              title: LocalizationKeys.appInfo.tr(context),
+            ),
             const Divider(height: 24),
             _ClickableInfoRow(
-              label: '应用名称',
+              label: LocalizationKeys.appNameLabel.tr(context),
               value: AppConstants.appName,
               icon: Icons.apps_rounded,
             ),
             const SizedBox(height: 12),
             _ClickableInfoRow(
-              label: '包名',
+              label: LocalizationKeys.packageNameLabel.tr(context),
               value: AppConstants.appPackageName,
               icon: Icons.api_rounded,
             ),
             const SizedBox(height: 12),
             _ClickableInfoRow(
-              label: '版本号',
+              label: LocalizationKeys.versionLabel.tr(context),
               value: AppConstants.appVersion,
               icon: Icons.history_rounded,
             ),
@@ -149,16 +159,19 @@ class _DeveloperCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _CardHeader(icon: Icons.code_rounded, title: '开发者信息'),
+            _CardHeader(
+              icon: Icons.code_rounded,
+              title: LocalizationKeys.developerInfo.tr(context),
+            ),
             const Divider(height: 24),
             _ClickableInfoRow(
-              label: '开发者',
+              label: LocalizationKeys.developerLabel.tr(context),
               value: AppConstants.developerName,
               icon: Icons.person_rounded,
             ),
             const SizedBox(height: 12),
             _ClickableInfoRow(
-              label: '联系邮箱',
+              label: LocalizationKeys.emailLabel.tr(context),
               value: AppConstants.developerEmail,
               icon: Icons.email_rounded,
               onTap: () => UrlLauncherHelper.launchURL(
@@ -190,16 +203,19 @@ class _OpenSourceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _CardHeader(icon: Icons.description_outlined, title: '开源许可'),
+            _CardHeader(
+              icon: Icons.description_outlined,
+              title: LocalizationKeys.openSourceLicense.tr(context),
+            ),
             const Divider(height: 24),
             _ClickableInfoRow(
-              label: '许可协议',
+              label: LocalizationKeys.licenseLabel.tr(context),
               value: AppConstants.license,
               icon: Icons.gavel_rounded,
             ),
             const SizedBox(height: 12),
             _ClickableInfoRow(
-              label: '项目源码',
+              label: LocalizationKeys.projectSourceCode.tr(context),
               value: 'GitHub / OwO-Dashboard',
               icon: Icons.code_rounded,
               onTap: () =>

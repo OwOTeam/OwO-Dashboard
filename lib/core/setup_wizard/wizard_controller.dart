@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/persistence_service.dart';
+import '../services/bootstrap_service.dart';
 import '../utils/logger.dart';
 import 'wizard_step.dart';
 
@@ -8,6 +9,7 @@ class WizardController extends ChangeNotifier {
   final List<WizardStep> _steps;
 
   String? _selectedPath;
+  String _languageCode = 'zh_CN';
   bool _logEnabled = true;
   bool _isCompleted = false;
   VoidCallback? onCompleted;
@@ -16,11 +18,17 @@ class WizardController extends ChangeNotifier {
     if (_steps.isNotEmpty) {
       _steps[0].onInit();
     }
+    // 获取当前保存的语言
+    final savedLanguage = PersistenceService().getString('language_code');
+    if (savedLanguage != null) {
+      _languageCode = savedLanguage;
+    }
   }
 
   int get currentStep => _currentStep;
   int get totalSteps => _steps.length;
   String? get selectedPath => _selectedPath;
+  String get languageCode => _languageCode;
 
   /// 获取处理后的预览路径（追加 AppName）
   String? get previewPath {
@@ -53,14 +61,21 @@ class WizardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setLanguageCode(String code) {
+    _languageCode = code;
+    notifyListeners();
+  }
+
   void setLogEnabled(bool value) {
     _logEnabled = value;
     notifyListeners();
   }
 
   bool get canGoNext {
-    // 存储路径步骤（步骤索引0）必须选择路径
-    if (_currentStep == 0 && _selectedPath == null) {
+    // 存储路径步骤必须选择路径
+    // 我们检查步骤 ID 而不是索引，因为增加了语言步骤
+    final currentStepId = _steps[_currentStep].id;
+    if (currentStepId == 'storage_path' && _selectedPath == null) {
       return false;
     }
     return _steps[_currentStep].canGoNext();
@@ -98,10 +113,15 @@ class WizardController extends ChangeNotifier {
       final finalRootPath = PersistenceService().rootPath!;
 
       // 3. 保存配置
+      await PersistenceService().setString('language_code', _languageCode);
       await PersistenceService().setBool('log_enabled', _logEnabled);
-      await PersistenceService().setBool('is_first_launch', false);
-      // 注意：这里保存的是最终生成的完整路径，确保下次启动时能正确定位
-      await PersistenceService().setString('data_root_path', finalRootPath);
+      // 同时保存到引导文件（核心：确保下次启动能找到路径）
+      final bootstrap = BootstrapService();
+      await bootstrap.setDataPath(finalRootPath);
+      await bootstrap.setFirstLaunch(false);
+
+      // 4. 重构：不再在 PersistenceService 中独立存储 is_first_launch 和 data_root_path
+      // 因为它们现在的权威版本在 bootstrap.json 中
 
       // 4. 初始化日志
       await AppLogger.init();

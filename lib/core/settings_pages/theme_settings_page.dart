@@ -5,6 +5,8 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import '../theme/app_theme_data.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/common/snack_bar.dart';
+import '../localization/localization_keys.dart';
+import '../services/localization_service.dart';
 
 /// 统一的主题设置页面
 class ThemeSettingsPage extends StatelessWidget {
@@ -14,6 +16,7 @@ class ThemeSettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LocalizationService>();
     final theme = Theme.of(context);
     return Scaffold(
       body: ListView(
@@ -25,12 +28,16 @@ class ThemeSettingsPage extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: onBack,
-                  ),
+                  if (onBack != null)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: onBack,
+                    ),
                   const SizedBox(width: AppThemeData.spacingSmall),
-                  Text('主题设置', style: theme.textTheme.headlineMedium),
+                  Text(
+                    LocalizationKeys.themeSettings.tr(context),
+                    style: theme.textTheme.headlineMedium,
+                  ),
                 ],
               ),
               Row(
@@ -38,10 +45,13 @@ class ThemeSettingsPage extends StatelessWidget {
                   _QuickThemeMenu(),
                   IconButton(
                     icon: const Icon(Icons.refresh),
-                    tooltip: '重置为默认',
+                    tooltip: LocalizationKeys.resetToDefault.tr(context),
                     onPressed: () {
                       context.read<ThemeProvider>().resetToDefault();
-                      SnackBarHelper.showSuccess(context, '已重置为默认主题');
+                      SnackBarHelper.showSuccess(
+                        context,
+                        LocalizationKeys.resetToDefaultSuccess.tr(context),
+                      );
                     },
                   ),
                 ],
@@ -52,23 +62,23 @@ class ThemeSettingsPage extends StatelessWidget {
 
           // 当前主题信息
           const _CurrentThemeCard(),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
 
           // 预设主题
           const _PresetThemesSection(),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
 
           // 自定义主题
           const _CustomThemeSection(),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
 
           // 对比度调整
           const _ContrastAdjustmentSection(),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
 
-          // 设计常量示例（可选）
+          // 设计常量示例
           const _DesignConstantsSection(),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
         ],
       ),
     );
@@ -96,7 +106,10 @@ class _ContrastAdjustmentSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('对比度调整', style: theme.textTheme.headlineMedium),
+                Text(
+                  LocalizationKeys.contrastAdjustment.tr(context),
+                  style: theme.textTheme.headlineMedium,
+                ),
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -108,7 +121,9 @@ class _ContrastAdjustmentSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    isDark ? '深色增强' : '浅色净化',
+                    isDark
+                        ? LocalizationKeys.darkModeEnhanced.tr(context)
+                        : LocalizationKeys.lightModePurified.tr(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.primary,
                       fontSize: 10,
@@ -120,8 +135,8 @@ class _ContrastAdjustmentSection extends StatelessWidget {
             const SizedBox(height: AppThemeData.spacingSmall),
             Text(
               isDark
-                  ? '调整深色模式下的背景深度，数值越大背景越接近纯黑。'
-                  : '调整浅色模式下的背景深度，数值越大背景越接近深灰。',
+                  ? LocalizationKeys.darkContrastDesc.tr(context)
+                  : LocalizationKeys.lightContrastDesc.tr(context),
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AppThemeData.spacingMedium),
@@ -158,9 +173,14 @@ class _ContrastAdjustmentSection extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('默认', style: theme.textTheme.bodySmall),
                   Text(
-                    isDark ? '极致深邃' : '透明纯净',
+                    LocalizationKeys.defaultLabel.tr(context),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Text(
+                    isDark
+                        ? LocalizationKeys.extremeDark.tr(context)
+                        : LocalizationKeys.pureLight.tr(context),
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -226,10 +246,15 @@ class _QuickThemeMenu extends StatelessWidget {
 
     return PopupMenuButton<AppThemeData>(
       icon: const Icon(Icons.palette_outlined),
-      tooltip: '快速切换主题',
+      tooltip: LocalizationKeys.switchThemeMode.tr(context),
       onSelected: (theme) {
         context.read<ThemeProvider>().setTheme(theme);
-        SnackBarHelper.showSuccess(context, '已切换到 ${theme.name}');
+        SnackBarHelper.showSuccess(
+          context,
+          LocalizationKeys.themeChangedTo
+              .tr(context)
+              .replaceFirst('{}', theme.name),
+        );
       },
       itemBuilder: (context) {
         return AppThemeData.presetThemes.map((theme) {
@@ -278,7 +303,10 @@ class _CurrentThemeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('当前主题', style: theme.textTheme.headlineMedium),
+            Text(
+              LocalizationKeys.currentTheme.tr(context),
+              style: theme.textTheme.headlineMedium,
+            ),
             const SizedBox(height: AppThemeData.spacingMedium),
             Row(
               children: [
@@ -293,12 +321,12 @@ class _CurrentThemeCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        provider.currentTheme.name,
+                        provider.currentTheme.getLocalizedName(context),
                         style: theme.textTheme.displaySmall,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        provider.getThemeModeName(provider.themeMode),
+                        provider.getThemeModeName(context, provider.themeMode),
                         style: theme.textTheme.bodyMedium,
                       ),
                     ],
@@ -333,12 +361,16 @@ class _QuickActionButtons extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () => provider.toggleThemeMode(),
           icon: Icon(provider.getThemeModeIcon(provider.themeMode)),
-          label: const Text('切换模式'),
+          label: Text(LocalizationKeys.switchThemeMode.tr(context)),
         ),
         OutlinedButton.icon(
           onPressed: () => provider.toggleDarkMode(),
           icon: const Icon(Icons.brightness_6),
-          label: Text(provider.isDarkMode ? '切换到浅色' : '切换到深色'),
+          label: Text(
+            provider.isDarkMode
+                ? LocalizationKeys.switchToLightMode.tr(context)
+                : LocalizationKeys.switchToDarkMode.tr(context),
+          ),
         ),
       ],
     );
@@ -357,9 +389,15 @@ class _PresetThemesSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('主题配色', style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              LocalizationKeys.themeColors.tr(context),
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: AppThemeData.spacingSmall),
-            Text('选择你喜欢的颜色主题', style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              LocalizationKeys.themeColorsDesc.tr(context),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: AppThemeData.spacingMedium),
             _PresetThemeGrid(),
           ],
@@ -394,7 +432,12 @@ class _PresetThemeGrid extends StatelessWidget {
           isSelected: isSelected,
           onTap: () {
             context.read<ThemeProvider>().setTheme(theme);
-            SnackBarHelper.showSuccess(context, '已切换到 ${theme.name}');
+            SnackBarHelper.showSuccess(
+              context,
+              LocalizationKeys.themeChangedTo
+                  .tr(context)
+                  .replaceFirst('{}', theme.name),
+            );
           },
         );
       },
@@ -474,9 +517,15 @@ class _CustomThemeSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('自定义主题', style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              LocalizationKeys.customTheme.tr(context),
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: AppThemeData.spacingSmall),
-            Text('创建你的专属配色方案', style: Theme.of(context).textTheme.bodyMedium),
+            Text(
+              LocalizationKeys.customThemeDesc.tr(context),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: AppThemeData.spacingMedium),
             if (currentTheme.isCustom) ...[
               Card(
@@ -501,7 +550,7 @@ class _CustomThemeSection extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '当前自定义主题',
+                              LocalizationKeys.currentCustomTheme.tr(context),
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
@@ -518,7 +567,7 @@ class _CustomThemeSection extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () => _showColorPicker(context),
                 icon: const Icon(Icons.palette),
-                label: const Text('创建自定义主题'),
+                label: Text(LocalizationKeys.createCustomTheme.tr(context)),
               ),
             ),
           ],
@@ -532,12 +581,14 @@ class _CustomThemeSection extends StatelessWidget {
         .read<ThemeProvider>()
         .currentTheme
         .primaryColor;
-    final nameController = TextEditingController(text: '自定义主题');
+    final nameController = TextEditingController(
+      text: LocalizationKeys.customTheme.tr(context),
+    );
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('自定义主题色'),
+        title: Text(LocalizationKeys.customThemeColor.tr(context)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -545,7 +596,7 @@ class _CustomThemeSection extends StatelessWidget {
               TextField(
                 controller: nameController,
                 decoration: InputDecoration(
-                  labelText: '主题名称',
+                  labelText: LocalizationKeys.themeName.tr(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(
                       AppThemeData.borderRadiusSmall,
@@ -563,8 +614,8 @@ class _CustomThemeSection extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 wheelDiameter: 200,
-                heading: const Text('选择主题色'),
-                subheading: const Text('选择色调'),
+                heading: Text(LocalizationKeys.selectThemeColor.tr(context)),
+                subheading: Text(LocalizationKeys.selectColorShade.tr(context)),
                 pickersEnabled: const {
                   ColorPickerType.both: false,
                   ColorPickerType.primary: true,
@@ -578,18 +629,23 @@ class _CustomThemeSection extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('取消'),
+            child: Text(LocalizationKeys.cancel.tr(context)),
           ),
           ElevatedButton(
             onPressed: () {
               context.read<ThemeProvider>().createCustomTheme(
                 selectedColor,
-                nameController.text.isEmpty ? '自定义主题' : nameController.text,
+                nameController.text.isEmpty
+                    ? LocalizationKeys.customTheme.tr(context)
+                    : nameController.text,
               );
               Navigator.pop(dialogContext);
-              SnackBarHelper.showSuccess(context, '自定义主题已应用');
+              SnackBarHelper.showSuccess(
+                context,
+                LocalizationKeys.customThemeApplied.tr(context),
+              );
             },
-            child: const Text('应用'),
+            child: Text(LocalizationKeys.confirm.tr(context)),
           ),
         ],
       ),
@@ -609,7 +665,10 @@ class _DesignConstantsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('设计常量', style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              LocalizationKeys.designConstants.tr(context),
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: AppThemeData.spacingMedium),
             const _ConstantItem('间距 - Small', '${AppThemeData.spacingSmall}px'),
             const _ConstantItem(

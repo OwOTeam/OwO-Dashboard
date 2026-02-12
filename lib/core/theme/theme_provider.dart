@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'app_theme_data.dart';
 import '../services/persistence_service.dart';
 import '../utils/logger.dart';
+import '../localization/localization_keys.dart';
+import '../services/localization_service.dart';
 
 /// 主题管理器（整合版）
 /// 管理应用的主题配色和主题模式（跟随系统、亮色、暗色）
@@ -119,14 +121,14 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   /// 获取主题模式的显示名称
-  String getThemeModeName(ThemeMode mode) {
+  String getThemeModeName(BuildContext context, ThemeMode mode) {
     switch (mode) {
       case ThemeMode.system:
-        return '跟随系统';
+        return LocalizationKeys.themeModeSystem.tr(context);
       case ThemeMode.light:
-        return '亮色模式';
+        return LocalizationKeys.themeModeLight.tr(context);
       case ThemeMode.dark:
-        return '暗色模式';
+        return LocalizationKeys.themeModeDark.tr(context);
     }
   }
 

@@ -1,27 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../localization/localization_keys.dart';
+import '../../services/localization_service.dart';
 
 class StoragePathTile extends StatelessWidget {
   final String? currentPath;
   final Function(String) onPathSelected;
-  final String title;
-  final String subtitle;
+  final String? title;
+  final String? subtitle;
   final bool showHeader;
   final EdgeInsetsGeometry contentPadding;
+  final bool enableTap;
+  final bool showChangeButton;
+  final String? changeButtonLabel;
 
   const StoragePathTile({
     super.key,
     required this.currentPath,
     required this.onPathSelected,
-    this.title = '数据存储路径',
-    this.subtitle = '应用的所有配置、日志和缓存文件都将保存在这个地方。',
+    this.title,
+    this.subtitle,
     this.showHeader = true,
     this.contentPadding = const EdgeInsets.all(16),
+    this.enableTap = true,
+    this.showChangeButton = false,
+    this.changeButtonLabel,
   });
 
-  Future<void> _pickPath() async {
+  Future<void> _pickPath(BuildContext context) async {
     String? result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: '请选择应用数据存储路径',
+      dialogTitle: LocalizationKeys.storagePathSelectionDialogTitle.tr(context),
     );
     if (result != null) {
       onPathSelected(result);
@@ -30,6 +38,11 @@ class StoragePathTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayTitle =
+        title ?? LocalizationKeys.storagePathSelectionTitle.tr(context);
+    final displaySubtitle =
+        subtitle ?? LocalizationKeys.storagePathSelectionSubtitle.tr(context);
+
     final content = Padding(
       padding: contentPadding,
       child: Column(
@@ -48,7 +61,7 @@ class StoragePathTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        displayTitle,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -56,7 +69,7 @@ class StoragePathTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        subtitle,
+                        displaySubtitle,
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.outline,
@@ -65,44 +78,96 @@ class StoragePathTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.edit_location_alt_outlined,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+                if (enableTap)
+                  Icon(
+                    Icons.edit_location_alt_outlined,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
               ],
             ),
           if (showHeader) const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              currentPath ?? '未选择路径',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 13,
-                color: currentPath != null
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.error,
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.4),
               ),
             ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    currentPath ??
+                        LocalizationKeys.storagePathNotSelected.tr(context),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      color: currentPath != null
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+                if (enableTap) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.edit_rounded,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ],
+              ],
+            ),
           ),
+          if (showChangeButton) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _pickPath(context),
+                icon: const Icon(Icons.drive_folder_upload_rounded, size: 18),
+                label: Text(
+                  changeButtonLabel ??
+                      LocalizationKeys.storagePathChangeButton.tr(context),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
 
-    if (!showHeader) {
-      return InkWell(onTap: _pickPath, child: content);
+    if (!showHeader && enableTap) {
+      return InkWell(onTap: () => _pickPath(context), child: content);
     }
 
-    return InkWell(
-      onTap: _pickPath,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
+    if (showHeader && enableTap) {
+      return InkWell(
+        onTap: () => _pickPath(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.3),
+            ),
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+          ),
+          child: content,
+        ),
+      );
+    }
+
+    if (showHeader) {
+      return Container(
         decoration: BoxDecoration(
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
@@ -111,7 +176,9 @@ class StoragePathTile extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceContainerLow,
         ),
         child: content,
-      ),
-    );
+      );
+    }
+
+    return content;
   }
 }

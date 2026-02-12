@@ -1,10 +1,13 @@
 // theme_model.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../localization/localization_keys.dart';
+import '../services/localization_service.dart';
 
 /// 主题配置模型
 class AppThemeData {
   final String name;
+  final String? localizationKey;
   final Color primaryColor;
   final Color secondaryColor;
   final Color accentColor;
@@ -12,11 +15,19 @@ class AppThemeData {
 
   const AppThemeData({
     required this.name,
+    this.localizationKey,
     required this.primaryColor,
     required this.secondaryColor,
     required this.accentColor,
     this.isCustom = false,
   });
+
+  String getLocalizedName(BuildContext context) {
+    if (localizationKey != null) {
+      return localizationKey!.tr(context);
+    }
+    return name;
+  }
 
   // ============ 私有颜色常量 ============
   // 背景色
@@ -59,36 +70,42 @@ class AppThemeData {
     // 默认主题
     const AppThemeData(
       name: '默认紫',
+      localizationKey: LocalizationKeys.themeDefaultPurple,
       primaryColor: Color(0xFF6C5CE7),
       secondaryColor: Color(0xFFA29BFE),
       accentColor: Color(0xFF00B894),
     ),
     const AppThemeData(
       name: '圣诞红',
+      localizationKey: LocalizationKeys.themeChristmasRed,
       primaryColor: Color(0xFFD32F2F),
       secondaryColor: Color(0xFFEF5350),
       accentColor: Color(0xFFFF9800),
     ),
     const AppThemeData(
       name: '海洋蓝',
+      localizationKey: LocalizationKeys.themeOceanBlue,
       primaryColor: Color(0xFF0277BD),
       secondaryColor: Color(0xFF4FC3F7),
       accentColor: Color(0xFF00BCD4),
     ),
     const AppThemeData(
       name: '自然绿',
+      localizationKey: LocalizationKeys.themeNaturalGreen,
       primaryColor: Color(0xFF388E3C),
       secondaryColor: Color(0xFF66BB6A),
       accentColor: Color(0xFF8BC34A),
     ),
     const AppThemeData(
       name: '温暖橙',
+      localizationKey: LocalizationKeys.themeWarmOrange,
       primaryColor: Color(0xFFE64A19),
       secondaryColor: Color(0xFFFF7043),
       accentColor: Color(0xFFFFB74D),
     ),
     const AppThemeData(
       name: '优雅紫',
+      localizationKey: LocalizationKeys.themeElegantPurple,
       primaryColor: Color(0xFF7B1FA2),
       secondaryColor: Color(0xFFAB47BC),
       accentColor: Color(0xFFBA68C8),

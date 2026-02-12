@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'app.dart';
+import 'core/app.dart';
 import 'core/utils/logger.dart';
 
 void main() async {

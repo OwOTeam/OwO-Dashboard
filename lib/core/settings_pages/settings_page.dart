@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme_data.dart';
+import '../localization/localization_keys.dart';
+import '../services/localization_service.dart';
 import 'theme_settings_page.dart';
 import 'about_page.dart';
 import 'general_settings_page.dart';
-import 'settings_page_registry.dart';
+import '../module_registry/settings_page/settings_page_registry.dart';
 
 /// 设置项配置模型
 class SettingsItem {
@@ -35,34 +38,28 @@ class _SettingsPageState extends State<SettingsPage> {
   String _currentRoute = 'main';
 
   // 智能注册子页面列表
-  late final List<SettingsItem> _settingsItems;
+  List<SettingsItem> _settingsItems = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _settingsItems = _buildSettingsItems();
-  }
-
-  List<SettingsItem> _buildSettingsItems() {
+  List<SettingsItem> _buildSettingsItems(BuildContext context) {
     final items = <SettingsItem>[
       // 核心设置页面
       SettingsItem(
-        title: '常规设置',
-        subtitle: '管理应用存储路径及基本行为',
+        title: LocalizationKeys.generalSettings.tr(context),
+        subtitle: LocalizationKeys.storageLocationDesc.tr(context),
         icon: Icons.settings_applications_outlined,
         routeKey: 'general',
         builder: (onBack) => GeneralSettingsPage(onBack: onBack),
       ),
       SettingsItem(
-        title: '主题设置',
-        subtitle: '自定义应用的主题颜色和显示模式',
+        title: LocalizationKeys.themeSettings.tr(context),
+        subtitle: LocalizationKeys.themeSettingsDesc.tr(context),
         icon: Icons.palette_outlined,
         routeKey: 'theme',
         builder: (onBack) => ThemeSettingsPage(onBack: onBack),
       ),
       SettingsItem(
-        title: '关于应用',
-        subtitle: '查看应用版本、开发者信息和许可协议',
+        title: LocalizationKeys.aboutApp.tr(context),
+        subtitle: LocalizationKeys.aboutAppDesc.tr(context),
         icon: Icons.info_outline,
         routeKey: 'about',
         builder: (onBack) => AboutPage(onBack: onBack),
@@ -76,8 +73,8 @@ class _SettingsPageState extends State<SettingsPage> {
     for (final page in customPages) {
       items.add(
         SettingsItem(
-          title: page.title,
-          subtitle: page.description ?? '',
+          title: page.getTitle(context),
+          subtitle: page.getDescription(context) ?? '',
           icon: page.icon,
           routeKey: page.id,
           builder: (onBack) => _CustomPageWrapper(page: page, onBack: onBack),
@@ -102,6 +99,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LocalizationService>();
+    _settingsItems = _buildSettingsItems(context);
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (Widget child, Animation<double> animation) {
@@ -151,7 +151,10 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.symmetric(
               vertical: AppThemeData.spacingMedium,
             ),
-            child: Text('设置', style: theme.textTheme.headlineMedium),
+            child: Text(
+              LocalizationKeys.settings.tr(context),
+              style: theme.textTheme.headlineMedium,
+            ),
           ),
           const SizedBox(height: AppThemeData.spacingSmall),
 
@@ -247,7 +250,7 @@ class _CustomPageWrapper extends StatelessWidget {
           children: [
             IconButton(icon: const Icon(Icons.arrow_back), onPressed: onBack),
             const SizedBox(width: AppThemeData.spacingSmall),
-            Text(page.title, style: theme.textTheme.headlineMedium),
+            Text(page.getTitle(context), style: theme.textTheme.headlineMedium),
           ],
         ),
         const SizedBox(height: AppThemeData.spacingLarge),

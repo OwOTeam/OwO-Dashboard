@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/navigation_item.dart';
+import '../../module_registry/navigation/navigation_item.dart';
 import '../../theme/app_theme_data.dart';
 
 /// 移动端底部导航栏组件

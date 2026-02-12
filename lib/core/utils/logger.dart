@@ -23,6 +23,7 @@ import 'package:logger/logger.dart';
 import 'package:path/path.dart' as p;
 
 import '../services/persistence_service.dart';
+import '../services/bootstrap_service.dart';
 
 class AppLogger {
   static const String _enabledKey = 'log_enabled';
@@ -118,8 +119,9 @@ class AppLogger {
 
     final persistence = PersistenceService();
     final rootPath = persistence.rootPath;
-    final isFirstLaunch = persistence.getBool('is_first_launch') ?? true;
-    final hasConfiguredPath = persistence.getString('data_root_path') != null;
+    final bootstrap = BootstrapService();
+    final isFirstLaunch = bootstrap.isFirstLaunch();
+    final hasConfiguredPath = bootstrap.getDataPath() != null;
 
     if (rootPath != null && _enabled && (!isFirstLaunch || hasConfiguredPath)) {
       _logDirectory = p.join(rootPath, 'logs');

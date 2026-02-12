@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/navigation_item.dart';
+import '../../module_registry/module_registry.dart';
+import '../../module_registry/navigation/navigation_item.dart';
 import '../../theme/app_theme_data.dart';
 import '../../theme/theme_provider.dart';
+import '../../localization/localization_keys.dart';
+import '../../services/localization_service.dart';
 
 class CustomAppBar {
   static PreferredSizeWidget build(
@@ -29,42 +32,14 @@ class CustomAppBar {
       ),
       // 右侧操作按钮
       actions: [
-        // 搜索按钮
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () {
-            // Do nothing, only a placeholder
-          },
-          tooltip: '搜索',
-        ),
-        const SizedBox(width: AppThemeData.spacingSmall),
-        // 通知按钮
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {
-                // Do nothing, only a placeholder
-              },
-              tooltip: '通知',
-            ),
-            // 未读通知徽章
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
+        // 动态加载已注册的操作按钮
+        ...ModuleRegistry().appBarActions.getAllActions().expand(
+          (action) => [
+            action.build(context),
+            const SizedBox(width: AppThemeData.spacingSmall),
           ],
         ),
-        const SizedBox(width: AppThemeData.spacingSmall),
+
         // 主题选择器
         Consumer<ThemeProvider>(
           builder: (context, themeProvider, child) {
@@ -72,7 +47,7 @@ class CustomAppBar {
               icon: Icon(
                 themeProvider.getThemeModeIcon(themeProvider.themeMode),
               ),
-              tooltip: '主题设置',
+              tooltip: LocalizationKeys.themeSettingsTooltip.tr(context),
               onSelected: (ThemeMode mode) {
                 themeProvider.setThemeMode(mode);
               },
@@ -90,7 +65,7 @@ class CustomAppBar {
                       ),
                       const SizedBox(width: AppThemeData.spacingMedium),
                       Text(
-                        themeProvider.getThemeModeName(mode),
+                        themeProvider.getThemeModeName(context, mode),
                         style: TextStyle(
                           color: themeProvider.themeMode == mode
                               ? theme.colorScheme.primary

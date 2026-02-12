@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../wizard_step.dart';
 import '../wizard_controller.dart';
+import '../../localization/localization_keys.dart';
+import '../../services/localization_service.dart';
 
 class LogSettingsStep extends WizardStep {
   @override
   String get id => 'log_settings';
 
   @override
-  String get title => '日志设置';
+  String get title => LocalizationKeys.logSettingsStep;
 
   @override
   int get priority => 20;
@@ -52,9 +54,15 @@ class LogSettingsStep extends WizardStep {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('启用日志记录', style: theme.textTheme.titleMedium),
+                    Text(
+                      LocalizationKeys.enableLogging.tr(context),
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 4),
-                    Text('建议开启以便后续排查问题', style: theme.textTheme.bodySmall),
+                    Text(
+                      LocalizationKeys.enableLoggingDesc.tr(context),
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -67,7 +75,7 @@ class LogSettingsStep extends WizardStep {
         ),
         const SizedBox(height: 24),
         Text(
-          '后续可在设置页调整日志开关与分割大小',
+          LocalizationKeys.logSettingsHint.tr(context),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.6),

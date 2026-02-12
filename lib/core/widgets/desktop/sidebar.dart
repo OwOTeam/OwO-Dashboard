@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../constants/app_constants.dart';
 import '../../theme/app_theme_data.dart';
-import '../../models/navigation_item.dart';
+import '../../module_registry/navigation/navigation_item.dart';
 import '../../theme/theme_provider.dart';
+import '../../localization/localization_keys.dart';
+import '../../services/localization_service.dart';
+import '../../module_registry/module_registry.dart';
 
 /// 桌面端侧边栏组件（紧凑型）
 /// 支持展开/折叠，带有流畅的动画过渡
@@ -37,7 +40,6 @@ class _DesktopSidebarState extends State<DesktopSidebar>
   static const double _collapsedThreshold = 100.0;
   static const double _iconSize = 20.0;
   static const double _logoSize = 32.0;
-  static const double _avatarRadius = 16.0;
   static const double _headerHeight = 56.0;
 
   @override
@@ -103,7 +105,11 @@ class _DesktopSidebarState extends State<DesktopSidebar>
               _buildHeader(theme),
               const SizedBox(height: AppThemeData.spacingSmall),
               _buildNavigationList(),
-              _buildFooter(theme),
+              ...ModuleRegistry().sidebarFooters.getAllFooters().map(
+                (footer) => _isCollapsed
+                    ? footer.buildCollapsed(context)
+                    : footer.buildExpanded(context),
+              ),
             ],
           ),
         );
@@ -134,10 +140,13 @@ class _DesktopSidebarState extends State<DesktopSidebar>
 
   Widget _buildCollapsedHeader(ThemeData theme) {
     return Center(
-      child: InkWell(
-        onTap: _toggleSidebar,
-        borderRadius: BorderRadius.circular(8),
-        child: _buildLogo(theme),
+      child: Tooltip(
+        message: LocalizationKeys.expandSidebar.tr(context),
+        child: InkWell(
+          onTap: _toggleSidebar,
+          borderRadius: BorderRadius.circular(8),
+          child: _buildLogo(theme),
+        ),
       ),
     );
   }
@@ -150,7 +159,7 @@ class _DesktopSidebarState extends State<DesktopSidebar>
         _buildLogoText(theme),
         _buildIconButton(
           icon: Icons.menu_open,
-          tooltip: '折叠侧边栏',
+          tooltip: LocalizationKeys.collapseSidebar.tr(context),
           onPressed: _toggleSidebar,
           theme: theme,
         ),
@@ -184,7 +193,7 @@ class _DesktopSidebarState extends State<DesktopSidebar>
     return Expanded(
       child: _buildFadeTransition(
         child: Text(
-          '你好!',
+          LocalizationKeys.userGreeting.tr(context),
           style: theme.textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.bold,
             fontSize: 14,
@@ -230,68 +239,6 @@ class _DesktopSidebarState extends State<DesktopSidebar>
             onTap: () => widget.onItemSelected(index),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildFooter(ThemeData theme) {
-    return Container(
-      padding: EdgeInsets.all(_isCollapsed ? 6 : AppThemeData.spacingSmall),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: AppThemeData.getBorderColor(theme), width: 1),
-        ),
-      ),
-      child: _isCollapsed
-          ? _buildCollapsedFooter(theme)
-          : _buildExpandedFooter(theme),
-    );
-  }
-
-  Widget _buildCollapsedFooter(ThemeData theme) {
-    return Center(child: _buildAvatar(theme));
-  }
-
-  Widget _buildExpandedFooter(ThemeData theme) {
-    return Row(
-      children: [
-        _buildAvatar(theme),
-        const SizedBox(width: AppThemeData.spacingSmall),
-        _buildUserInfo(theme),
-      ],
-    );
-  }
-
-  Widget _buildAvatar(ThemeData theme) {
-    return CircleAvatar(
-      radius: _avatarRadius,
-      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-      child: Icon(Icons.person, color: theme.colorScheme.primary, size: 18),
-    );
-  }
-
-  Widget _buildUserInfo(ThemeData theme) {
-    return Expanded(
-      child: _buildFadeTransition(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'User',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'user@mail.com',
-              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
       ),
     );
   }

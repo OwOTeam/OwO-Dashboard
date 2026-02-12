@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../services/persistence_service.dart';
 import '../wizard_step.dart';
 import '../wizard_controller.dart';
+import '../../localization/localization_keys.dart';
+import '../../services/localization_service.dart';
 import 'dart:io';
 
 /// 配置确认步骤
@@ -13,7 +15,7 @@ class SummaryStep extends WizardStep {
   String get id => 'summary';
 
   @override
-  String get title => '配置确认';
+  String get title => LocalizationKeys.summaryStep;
 
   @override
   int get priority => 1000; // 总结步骤始终最后
@@ -24,7 +26,7 @@ class SummaryStep extends WizardStep {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<WizardController>();
-    final summaryItems = _collectSummaryItems(controller);
+    final summaryItems = _collectSummaryItems(context, controller);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,15 +39,17 @@ class SummaryStep extends WizardStep {
               size: 28,
             ),
             const SizedBox(width: 12),
-            const Text(
-              '配置摘要',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              LocalizationKeys.configSummary.tr(context),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          '已完成 ${controller.currentStep} 个配置步骤',
+          LocalizationKeys.configCompleted
+              .tr(context)
+              .replaceFirst('{}', controller.currentStep.toString()),
           style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 32),
@@ -73,7 +77,7 @@ class SummaryStep extends WizardStep {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '点击"完成初始化"后，应用将根据以上配置自动初始化并启动。',
+                  LocalizationKeys.finishSetupHint.tr(context),
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                 ),
               ),
@@ -85,34 +89,40 @@ class SummaryStep extends WizardStep {
   }
 
   /// 智能收集所有步骤的配置摘要
-  List<_SummaryItem> _collectSummaryItems(WizardController controller) {
+  List<_SummaryItem> _collectSummaryItems(
+    BuildContext context,
+    WizardController controller,
+  ) {
     final items = <_SummaryItem>[];
 
     // 遍历所有已完成的步骤（不包括当前的 Summary 步骤）
     for (int i = 0; i < controller.currentStep; i++) {
       final step = controller.getStepAt(i);
-      final stepTitle = step.title;
+      final stepTitle = step.title.tr(context);
 
       // 获取步骤的配置摘要
       final summary = step.getSummary();
 
       if (summary != null && summary.isNotEmpty) {
-        // 如果步骤提供了自定义摘要
         items.add(
           _SummaryItem(
             stepTitle: stepTitle,
-            icon: _getIconForStep(i),
+            icon: _getIconForStep(step.id),
             configurations: summary,
           ),
         );
       } else {
         // 智能推断配置内容
-        final inferredConfig = _inferStepConfiguration(i, controller);
+        final inferredConfig = _inferStepConfiguration(
+          context,
+          step,
+          controller,
+        );
         if (inferredConfig.isNotEmpty) {
           items.add(
             _SummaryItem(
               stepTitle: stepTitle,
-              icon: _getIconForStep(i),
+              icon: _getIconForStep(step.id),
               configurations: inferredConfig,
             ),
           );
@@ -125,47 +135,64 @@ class SummaryStep extends WizardStep {
 
   /// 智能推断步骤配置
   Map<String, String> _inferStepConfiguration(
-    int stepIndex,
+    BuildContext context,
+    WizardStep step,
     WizardController controller,
   ) {
-    switch (stepIndex) {
-      case 0: // Storage path step (现在是第一个步骤)
+    switch (step.id) {
+      case 'language_selection':
+        final languages = LocalizationService().supportedLanguages;
+        final selected = languages.firstWhere(
+          (l) => l['code'] == controller.languageCode,
+          orElse: () => {'name': 'Unknown'},
+        );
+        return {LocalizationKeys.language.tr(context): selected['name']!};
+      case 'storage_path':
         final path = controller.selectedPath;
         if (path != null) {
-          // 在摘要中显示处理后的最终路径
           final finalPath = PersistenceService.getProcessedRootPath(path);
           final dir = Directory(finalPath);
           final pathName = dir.path.split(Platform.pathSeparator).last;
           return {
-            '原始选择': path,
-            '最终存储': finalPath,
-            '目录名称': pathName,
-            '路径类型': _getPathType(path),
+            LocalizationKeys.originalSelection.tr(context): path,
+            LocalizationKeys.finalStorage.tr(context): finalPath,
+            LocalizationKeys.directoryName.tr(context): pathName,
+            LocalizationKeys.pathType.tr(context): _getPathType(context, path),
           };
         }
         return {};
-      case 1:
-        return {'日志记录': controller.logEnabled ? '已启用' : '已关闭'};
+      case 'log_settings':
+        return {
+          LocalizationKeys.logging.tr(context): controller.logEnabled
+              ? LocalizationKeys.enabled.tr(context)
+              : LocalizationKeys.disabled.tr(context),
+        };
       default:
         return {};
     }
   }
 
   /// 获取路径类型描述
-  String _getPathType(String path) {
-    if (path.contains('Documents')) return '文档目录';
-    if (path.contains('AppData')) return '应用数据目录';
-    if (path.contains('Desktop')) return '桌面';
-    if (path.contains('Downloads')) return '下载目录';
-    return '自定义路径';
+  String _getPathType(BuildContext context, String path) {
+    if (path.contains('Documents')) return LocalizationKeys.docsDir.tr(context);
+    if (path.contains('AppData')) {
+      return LocalizationKeys.appDataDir.tr(context);
+    }
+    if (path.contains('Desktop')) return LocalizationKeys.desktop.tr(context);
+    if (path.contains('Downloads')) {
+      return LocalizationKeys.downloadsDir.tr(context);
+    }
+    return LocalizationKeys.customPath.tr(context);
   }
 
   /// 根据步骤索引获取图标
-  IconData _getIconForStep(int stepIndex) {
-    switch (stepIndex) {
-      case 0: // Storage path step
+  IconData _getIconForStep(String stepId) {
+    switch (stepId) {
+      case 'language_selection':
+        return Icons.language;
+      case 'storage_path':
         return Icons.folder_open;
-      case 1:
+      case 'log_settings':
         return Icons.description_outlined;
       default:
         return Icons.settings;

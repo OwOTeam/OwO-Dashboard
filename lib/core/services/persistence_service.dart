@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'bootstrap_service.dart';
 import '../constants/app_constants.dart';
 import '../utils/logger.dart';
 
@@ -48,10 +49,22 @@ class PersistenceService {
       _rootPath = getProcessedRootPath(appDocDir.path);
     }
 
+    // 处理旧数据迁移 (从 Roaming 迁移到新路径)
+    // 只有在首次启动且选择了自定义路径时才执行迁移
+    final bootstrap = BootstrapService();
+    if (bootstrap.isFirstLaunch() && customPath != null) {
+      await _performFullMigration(_rootPath!);
+    }
+
     try {
       final directory = Directory(_rootPath!);
       if (!await directory.exists()) {
         await directory.create(recursive: true);
+      }
+
+      // 同步路径到引导文件，确保下次启动能找到
+      if (bootstrap.isInitialized) {
+        await bootstrap.setDataPath(_rootPath!);
       }
 
       _settingsFile = File(p.join(_rootPath!, 'settings.json'));
@@ -60,6 +73,72 @@ class PersistenceService {
       AppLogger.info('PersistenceService initialized at: $_rootPath');
     } catch (e) {
       AppLogger.error('PersistenceService initialization failed: $e');
+    }
+  }
+
+  /// 执行全量数据迁移（从默认 Roaming 路径迁移到自定义路径）
+  Future<void> _performFullMigration(String targetPath) async {
+    try {
+      // 获取默认的 Roaming 路径 (C:\Users\<user>\AppData\Roaming\com.owoblog\OwO! Dashboard)
+      final sourceDir = await getApplicationSupportDirectory();
+
+      if (!await sourceDir.exists()) {
+        AppLogger.info('PersistenceService: No legacy data to migrate.');
+        return;
+      }
+
+      final targetDir = Directory(targetPath);
+      if (!await targetDir.exists()) {
+        await targetDir.create(recursive: true);
+      }
+
+      // 如果源路径和目标路径相同，跳过
+      if (p.equals(sourceDir.path, targetDir.path)) {
+        AppLogger.info(
+          'PersistenceService: Source and target are the same, skipping migration.',
+        );
+        return;
+      }
+
+      AppLogger.info(
+        'PersistenceService: Migrating app data from ${sourceDir.path} to ${targetDir.path}',
+      );
+
+      // 递归复制所有内容
+      await _copyDirectoryRecursive(sourceDir, targetDir);
+
+      // 迁移完成后尝试删除源目录
+      try {
+        await sourceDir.delete(recursive: true);
+        AppLogger.info('PersistenceService: Legacy data directory deleted.');
+      } catch (e) {
+        AppLogger.warning(
+          'PersistenceService: Failed to delete legacy directory: $e',
+        );
+      }
+    } catch (e, s) {
+      AppLogger.error('PersistenceService: Full migration failed', e, s);
+    }
+  }
+
+  /// 递归复制目录内容
+  Future<void> _copyDirectoryRecursive(
+    Directory source,
+    Directory destination,
+  ) async {
+    await for (final entity in source.list(recursive: false)) {
+      final name = p.basename(entity.path);
+      final destPath = p.join(destination.path, name);
+
+      if (entity is Directory) {
+        final newDir = Directory(destPath);
+        if (!await newDir.exists()) {
+          await newDir.create(recursive: true);
+        }
+        await _copyDirectoryRecursive(entity, newDir);
+      } else if (entity is File) {
+        await entity.copy(destPath);
+      }
     }
   }
 
@@ -211,6 +290,9 @@ class PersistenceService {
       _initialized = false;
       _rootPath = null;
       _settingsFile = null;
+
+      // 5. 重置引导配置
+      await BootstrapService().reset();
 
       AppLogger.info('应用已重置');
     } catch (e) {

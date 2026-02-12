@@ -1,13 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../services/persistence_service.dart';
+import '../services/bootstrap_service.dart';
+import '../services/localization_service.dart';
+import '../localization/localization_keys.dart';
 import '../theme/app_theme_data.dart';
 import '../utils/logger.dart';
+import '../utils/update_checker.dart';
 import '../widgets/common/snack_bar.dart';
 import '../widgets/common/storage_path_tile.dart';
 import '../widgets/common/dialog.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 class GeneralSettingsPage extends StatefulWidget {
   final VoidCallback onBack;
@@ -36,19 +43,17 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
 
     final result = await showAdvancedConfirmDialog(
       context: context,
-      title: '修改存储路径',
-      content: '修改存储路径后，应用将重新初始化该目录下的数据文件。建议手动将原目录文件移动到新目录以保留数据。是否继续？',
+      title: LocalizationKeys.storageLocation.tr(context),
+      content: LocalizationKeys.storageLocationChangeConfirm.tr(context),
       icon: Icons.warning_amber_rounded,
-      confirmText: '确认修改',
-      cancelText: '取消',
+      confirmText: LocalizationKeys.confirm.tr(context),
+      cancelText: LocalizationKeys.cancel.tr(context),
     );
 
     if (result == true) {
-      // PersistenceService().init 内部会自动处理追加 AppName 和清洗特殊字符
       await PersistenceService().init(customPath: newPath);
       final finalPath = PersistenceService().rootPath!;
 
-      // 存储最终生成的完整路径
       await PersistenceService().set('data_root_path', finalPath);
       await AppLogger.init();
 
@@ -57,7 +62,10 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
       });
 
       if (mounted) {
-        SnackBarHelper.showSuccess(context, '路径修改成功，应用已自动连接新位置。');
+        SnackBarHelper.showSuccess(
+          context,
+          LocalizationKeys.storageLocationChangeSuccess.tr(context),
+        );
       }
     }
   }
@@ -91,16 +99,176 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                 onPressed: widget.onBack,
               ),
               const SizedBox(width: AppThemeData.spacingSmall),
-              Text('常规设置', style: theme.textTheme.headlineMedium),
+              Text(
+                LocalizationKeys.generalSettings.tr(context),
+                style: theme.textTheme.headlineMedium,
+              ),
             ],
           ),
           const SizedBox(height: AppThemeData.spacingMedium),
+
+          _buildLanguageSection(theme),
+          const SizedBox(height: AppThemeData.spacingSmall),
+
           _buildStorageSection(theme),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
+
           _buildLogSection(theme),
-          const SizedBox(height: AppThemeData.spacingLarge),
+          const SizedBox(height: AppThemeData.spacingSmall),
+
+          _buildUpdateCheckSection(theme),
+          const SizedBox(height: AppThemeData.spacingSmall),
           _buildDangerSection(context, theme),
+
+          if (kDebugMode) ...[
+            const SizedBox(height: AppThemeData.spacingSmall),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: AppThemeData.spacingSmall,
+              ),
+              child: Text(
+                'Debug Mode',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            _buildBootstrapSection(theme),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageSection(ThemeData theme) {
+    final localizationService = context.watch<LocalizationService>();
+    final languages = localizationService.supportedLanguages;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppThemeData.spacingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(
+                      AppThemeData.borderRadiusSmall,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.language,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppThemeData.spacingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        LocalizationKeys.language.tr(context),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        LocalizationKeys.selectLanguage.tr(context),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppThemeData.spacingMedium),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: languages.map((lang) {
+                final isSelected =
+                    localizationService.currentLanguageCode == lang['code'];
+                return ChoiceChip(
+                  label: Text(lang['name']!),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      final parts = lang['code']!.split('_');
+                      localizationService.setLocale(Locale(parts[0], parts[1]));
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdateCheckSection(ThemeData theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppThemeData.spacingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(
+                      AppThemeData.borderRadiusSmall,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.system_update_outlined,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppThemeData.spacingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        LocalizationKeys.updateCheck.tr(context),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        LocalizationKeys.updateCheckDesc.tr(context),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppThemeData.spacingMedium),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => UpdateChecker.checkAndShowUpdate(context),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(LocalizationKeys.checkForUpdates.tr(context)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -133,9 +301,15 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('应用存储', style: theme.textTheme.titleMedium),
+                      Text(
+                        LocalizationKeys.storageLocation.tr(context),
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 4),
-                      Text('设置应用数据的保存位置', style: theme.textTheme.bodySmall),
+                      Text(
+                        LocalizationKeys.storageLocationDesc.tr(context),
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
@@ -147,13 +321,8 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
               onPathSelected: _updatePath,
               showHeader: false,
               contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: AppThemeData.spacingSmall),
-            Text(
-              '数据目录包含配置、插件路径与日志等核心信息',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+              enableTap: false,
+              showChangeButton: true,
             ),
           ],
         ),
@@ -189,9 +358,15 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('应用日志', style: theme.textTheme.titleMedium),
+                      Text(
+                        LocalizationKeys.logSettings.tr(context),
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 4),
-                      Text('记录运行过程，便于排查问题', style: theme.textTheme.bodySmall),
+                      Text(
+                        LocalizationKeys.logSettingsDesc.tr(context),
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
@@ -202,7 +377,10 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
             Row(
               children: [
                 Expanded(
-                  child: Text('日志分割大小', style: theme.textTheme.bodyMedium),
+                  child: Text(
+                    LocalizationKeys.logMaxSize.tr(context),
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -232,12 +410,6 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                   ? (value) => setState(() => _logMaxSizeMb = value)
                   : null,
               onChangeEnd: _logEnabled ? _updateLogMaxSize : null,
-            ),
-            Text(
-              '建议按使用强度调整，避免日志文件过大',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
             ),
           ],
         ),
@@ -273,9 +445,15 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('危险操作', style: theme.textTheme.titleMedium),
+                      Text(
+                        LocalizationKeys.dangerZone.tr(context),
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 4),
-                      Text('重置后需要重新完成初始化', style: theme.textTheme.bodySmall),
+                      Text(
+                        LocalizationKeys.resetAppDesc.tr(context),
+                        style: theme.textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
@@ -309,7 +487,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '重置应用',
+                    LocalizationKeys.resetApp.tr(context),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -317,9 +495,9 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                    '清除所有配置和缓存，重新引导初始化',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Text(
+                    LocalizationKeys.resetAppDesc.tr(context),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
@@ -336,28 +514,26 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
   }
 
   Future<void> _handleResetApp(BuildContext context) async {
-    // 第一次确认
     final firstConfirm = await showAdvancedConfirmDialog(
       context: context,
-      title: '确认重置应用？',
-      content: '此操作将清除所有配置、缓存数据，并重新引导您完成初始化。\n\n该操作不可撤销！',
+      title: LocalizationKeys.resetAppConfirmTitle.tr(context),
+      content: LocalizationKeys.resetAppConfirmContent.tr(context),
       icon: Icons.warning_amber_rounded,
       confirmColor: Colors.orange,
-      confirmText: '继续',
-      cancelText: '取消',
+      confirmText: LocalizationKeys.confirm.tr(context),
+      cancelText: LocalizationKeys.cancel.tr(context),
     );
 
     if (firstConfirm != true) return;
 
-    // 第二次确认
     final secondConfirm = await showAdvancedConfirmDialog(
       context: context,
-      title: '最后确认',
-      content: '您真的要重置应用吗？所有数据将被清除且无法恢复。',
+      title: LocalizationKeys.confirm.tr(context),
+      content: LocalizationKeys.resetAppConfirmContent.tr(context),
       icon: Icons.error_outline,
       confirmColor: Colors.red,
-      confirmText: '确认重置',
-      cancelText: '取消',
+      confirmText: LocalizationKeys.confirm.tr(context),
+      cancelText: LocalizationKeys.cancel.tr(context),
     );
 
     if (secondConfirm != true) return;
@@ -365,26 +541,28 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     try {
       if (!mounted) return;
 
-      showLoadingDialog(context: context, title: '正在重置应用...', content: '请稍候');
+      showLoadingDialog(
+        context: context,
+        title: '${LocalizationKeys.resetApp.tr(context)}...',
+        content: LocalizationKeys.loading.tr(context),
+      );
 
       await PersistenceService().resetApp();
 
       if (!mounted) return;
 
-      Navigator.of(context).pop(); // 关闭加载对话框
+      Navigator.of(context).pop();
 
-      // 显示成功提示并重启应用
       await showAdvancedConfirmDialog(
         context: context,
-        title: '重置成功',
-        content: '应用将重新启动以完成初始化',
+        title: LocalizationKeys.success.tr(context),
+        content: LocalizationKeys.resetSuccess.tr(context),
         icon: Icons.check_circle_outline,
         confirmColor: Colors.green,
-        confirmText: '确定',
+        confirmText: LocalizationKeys.confirm.tr(context),
         cancelText: '',
       );
 
-      // 重启应用
       if (mounted) {
         final executable = Platform.resolvedExecutable;
         await Process.start(executable, []);
@@ -393,8 +571,122 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     } catch (e) {
       if (!mounted) return;
 
-      Navigator.of(context).pop(); // 关闭加载对话框
+      Navigator.of(context).pop();
       SnackBarHelper.showError(context, '重置失败: $e');
+    }
+  }
+
+  Widget _buildBootstrapSection(ThemeData theme) {
+    final bootstrap = BootstrapService();
+    final bootstrapPath = bootstrap.bootstrapFilePath;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppThemeData.spacingMedium),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(
+                      AppThemeData.borderRadiusSmall,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.settings_suggest,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppThemeData.spacingSmall),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        LocalizationKeys.bootstrapConfig.tr(context),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        LocalizationKeys.bootstrapConfigDesc.tr(context),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppThemeData.spacingMedium),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.5,
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.file_present,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          bootstrapPath ?? 'Unknown',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openBootstrapDirectory(bootstrapPath),
+                      icon: const Icon(Icons.folder_open, size: 18),
+                      label: Text(LocalizationKeys.openDirectory.tr(context)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openBootstrapDirectory(String? filePath) async {
+    if (filePath == null) return;
+    final directory = p.dirname(filePath);
+    if (await Directory(directory).exists()) {
+      if (Platform.isWindows) {
+        await Process.run('explorer.exe', [directory]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', [directory]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [directory]);
+      }
     }
   }
 }
