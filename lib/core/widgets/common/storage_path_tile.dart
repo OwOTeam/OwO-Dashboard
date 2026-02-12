@@ -42,6 +42,11 @@ class StoragePathTile extends StatelessWidget {
         title ?? LocalizationKeys.storagePathSelectionTitle.tr(context);
     final displaySubtitle =
         subtitle ?? LocalizationKeys.storagePathSelectionSubtitle.tr(context);
+    final pathLabel =
+        currentPath ?? LocalizationKeys.storagePathNotSelected.tr(context);
+    final changeLabel =
+        changeButtonLabel ?? LocalizationKeys.storagePathChangeButton.tr(context);
+    final tapLabel = '$displayTitle. $displaySubtitle. $pathLabel. $changeLabel';
 
     final content = Padding(
       padding: contentPadding,
@@ -87,42 +92,46 @@ class StoragePathTile extends StatelessWidget {
               ],
             ),
           if (showHeader) const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outline.withValues(alpha: 0.4),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    currentPath ??
-                        LocalizationKeys.storagePathNotSelected.tr(context),
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                      color: currentPath != null
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.error,
-                    ),
+          Semantics(
+            label: pathLabel,
+            child: ExcludeSemantics(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: 0.4),
                   ),
                 ),
-                if (enableTap) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.edit_rounded,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                ],
-              ],
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        pathLabel,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          color: currentPath != null
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                    if (enableTap) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.edit_rounded,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
           if (showChangeButton) ...[
@@ -133,8 +142,7 @@ class StoragePathTile extends StatelessWidget {
                 onPressed: () => _pickPath(context),
                 icon: const Icon(Icons.drive_folder_upload_rounded, size: 18),
                 label: Text(
-                  changeButtonLabel ??
-                      LocalizationKeys.storagePathChangeButton.tr(context),
+                  changeLabel,
                 ),
               ),
             ),
@@ -144,24 +152,36 @@ class StoragePathTile extends StatelessWidget {
     );
 
     if (!showHeader && enableTap) {
-      return InkWell(onTap: () => _pickPath(context), child: content);
+      return Semantics(
+        button: true,
+        label: tapLabel,
+        child: ExcludeSemantics(
+          child: InkWell(onTap: () => _pickPath(context), child: content),
+        ),
+      );
     }
 
     if (showHeader && enableTap) {
-      return InkWell(
-        onTap: () => _pickPath(context),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.outline.withValues(alpha: 0.3),
-            ),
+      return Semantics(
+        button: true,
+        label: tapLabel,
+        child: ExcludeSemantics(
+          child: InkWell(
+            onTap: () => _pickPath(context),
             borderRadius: BorderRadius.circular(12),
-            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.3),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+              ),
+              child: content,
+            ),
           ),
-          child: content,
         ),
       );
     }

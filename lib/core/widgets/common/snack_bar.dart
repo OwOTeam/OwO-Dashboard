@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme_data.dart';
+import '../../localization/localization_keys.dart';
+import '../../services/localization_service.dart';
 
 enum SnackBarType { info, success, warning, error }
 
@@ -147,17 +149,23 @@ class SnackBarHelper {
                   // 关闭按钮
                   Material(
                     color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: () {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Icon(
-                          Icons.close,
-                          size: 18,
-                          color: foregroundColor.withValues(alpha: 0.5),
+                    child: Semantics(
+                      button: true,
+                      label: LocalizationKeys.close.tr(context),
+                      child: ExcludeSemantics(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Icon(
+                              Icons.close,
+                              size: 18,
+                              color: foregroundColor.withValues(alpha: 0.5),
+                            ),
+                          ),
                         ),
                       ),
                     ),

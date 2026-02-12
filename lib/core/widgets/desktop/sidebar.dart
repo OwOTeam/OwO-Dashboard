@@ -140,12 +140,16 @@ class _DesktopSidebarState extends State<DesktopSidebar>
 
   Widget _buildCollapsedHeader(ThemeData theme) {
     return Center(
-      child: Tooltip(
-        message: LocalizationKeys.expandSidebar.tr(context),
-        child: InkWell(
-          onTap: _toggleSidebar,
-          borderRadius: BorderRadius.circular(8),
-          child: _buildLogo(theme),
+      child: Semantics(
+        button: true,
+        label: LocalizationKeys.expandSidebar.tr(context),
+        child: Tooltip(
+          message: LocalizationKeys.expandSidebar.tr(context),
+          child: InkWell(
+            onTap: _toggleSidebar,
+            borderRadius: BorderRadius.circular(8),
+            child: ExcludeSemantics(child: _buildLogo(theme)),
+          ),
         ),
       ),
     );
@@ -184,7 +188,13 @@ class _DesktopSidebarState extends State<DesktopSidebar>
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.asset(AppConstants.assetIconPath, fit: BoxFit.contain),
+        child: Semantics(
+          image: true,
+          label: LocalizationKeys.appLogo.tr(context),
+          child: ExcludeSemantics(
+            child: Image.asset(AppConstants.assetIconPath, fit: BoxFit.contain),
+          ),
+        ),
       ),
     );
   }
@@ -210,14 +220,21 @@ class _DesktopSidebarState extends State<DesktopSidebar>
     required VoidCallback onPressed,
     required ThemeData theme,
   }) {
-    return IconButton(
-      icon: Icon(icon, color: theme.colorScheme.primary, size: _iconSize),
-      onPressed: onPressed,
-      tooltip: tooltip,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(
-        minWidth: _logoSize,
-        minHeight: _logoSize,
+    return Semantics(
+      button: true,
+      label: tooltip,
+      onTap: onPressed,
+      child: ExcludeSemantics(
+        child: IconButton(
+          icon: Icon(icon, color: theme.colorScheme.primary, size: _iconSize),
+          onPressed: onPressed,
+          tooltip: tooltip,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: _logoSize,
+            minHeight: _logoSize,
+          ),
+        ),
       ),
     );
   }
@@ -276,20 +293,33 @@ class _NavigationItemWidget extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
+        child: Semantics(
+          container: true,
+          button: true,
+          selected: isSelected,
+          label: _buildSemanticsLabel(context),
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppThemeData.borderRadiusSmall),
-          child: AnimatedContainer(
-            duration: AppThemeData.animationDuration,
-            curve: Curves.easeInOut,
-            padding: EdgeInsets.symmetric(
-              horizontal: isCollapsed ? 6 : AppThemeData.spacingSmall,
-              vertical: 10,
+          enabled: true,
+          focusable: true,
+          child: ExcludeSemantics(
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(
+                AppThemeData.borderRadiusSmall,
+              ),
+              child: AnimatedContainer(
+                duration: AppThemeData.animationDuration,
+                curve: Curves.easeInOut,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCollapsed ? 6 : AppThemeData.spacingSmall,
+                  vertical: 10,
+                ),
+                decoration: _buildItemDecoration(theme),
+                child: isCollapsed
+                    ? _buildCollapsedItem(theme)
+                    : _buildExpandedItem(context, theme),
+              ),
             ),
-            decoration: _buildItemDecoration(theme),
-            child: isCollapsed
-                ? _buildCollapsedItem(theme)
-                : _buildExpandedItem(context, theme),
           ),
         ),
       ),
@@ -381,5 +411,12 @@ class _NavigationItemWidget extends StatelessWidget {
     return isSelected
         ? theme.colorScheme.primary
         : AppThemeData.getTextColor(theme, isPrimary: false);
+  }
+
+  String _buildSemanticsLabel(BuildContext context) {
+    if (item.badge == null || item.badge!.isEmpty) {
+      return item.title;
+    }
+    return '${item.title}, ${LocalizationKeys.badgeLabel.tr(context)} ${item.badge}';
   }
 }

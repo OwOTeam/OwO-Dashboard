@@ -6,6 +6,7 @@ import '../../core/module_registry/app_bar/app_bar_action.dart';
 import '../../core/module_registry/navigation/navigation_item.dart';
 import '../../core/module_registry/sidebar/sidebar_footer.dart';
 import '../../core/services/localization_service.dart';
+import '../../core/localization/localization_keys.dart';
 import 'localization/example_translations.dart';
 import 'localization/example_localization_keys.dart';
 
@@ -213,27 +214,37 @@ class _NotificationsAction extends AppBarAction {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {},
-          tooltip: ExampleLocalizationKeys.notificationsLabel.tr(context),
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
+    void onPressed() {}
+    final label = ExampleLocalizationKeys.notificationsLabel.tr(context);
+    final badgeLabel = LocalizationKeys.badgeLabel.tr(context);
+    return Semantics(
+      button: true,
+      label: '$label, $badgeLabel',
+      onTap: onPressed,
+      child: ExcludeSemantics(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: onPressed,
+              tooltip: label,
             ),
-          ),
+            Positioned(
+              right: 8,
+              top: 8,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

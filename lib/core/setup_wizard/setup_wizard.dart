@@ -301,13 +301,19 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
-                  child: Image.asset(
-                    AppConstants.assetIconPath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.dashboard_rounded,
-                      size: 60,
-                      color: Colors.white,
+                  child: Semantics(
+                    image: true,
+                    label: LocalizationKeys.appLogo.tr(context),
+                    child: ExcludeSemantics(
+                      child: Image.asset(
+                        AppConstants.assetIconPath,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.dashboard_rounded,
+                          size: 60,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),

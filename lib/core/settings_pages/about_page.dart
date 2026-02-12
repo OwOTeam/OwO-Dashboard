@@ -25,6 +25,7 @@ class AboutPage extends StatelessWidget {
               if (onBack != null)
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
+                  tooltip: LocalizationKeys.back.tr(context),
                   onPressed: onBack,
                 ),
               const SizedBox(width: AppThemeData.spacingSmall),
@@ -82,13 +83,19 @@ class _AppIconCard extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(30),
-              child: Image.asset(
-                AppConstants.assetIconPath,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.dashboard_rounded,
-                  size: 60,
-                  color: Colors.white,
+              child: Semantics(
+                image: true,
+                label: LocalizationKeys.appLogo.tr(context),
+                child: ExcludeSemantics(
+                  child: Image.asset(
+                    AppConstants.assetIconPath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.dashboard_rounded,
+                      size: 60,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -289,36 +296,44 @@ class _ClickableInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppThemeData.borderRadiusSmall),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
+    return Semantics(
+      button: onTap != null,
+      label: '$label: $value',
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppThemeData.borderRadiusSmall),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: Theme.of(context).textTheme.bodyMedium?.color,
+                ),
+                const SizedBox(width: 12),
+                Text(label, style: Theme.of(context).textTheme.bodyLarge),
+                const Spacer(),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: onTap != null
+                        ? Theme.of(context).primaryColor
+                        : null,
+                  ),
+                ),
+                if (onTap != null) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(width: 12),
-            Text(label, style: Theme.of(context).textTheme.bodyLarge),
-            const Spacer(),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: onTap != null ? Theme.of(context).primaryColor : null,
-              ),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: Theme.of(context).primaryColor,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

@@ -96,6 +96,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back),
+                tooltip: LocalizationKeys.back.tr(context),
                 onPressed: widget.onBack,
               ),
               const SizedBox(width: AppThemeData.spacingSmall),
@@ -468,46 +469,57 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
   }
 
   Widget _buildResetButton(BuildContext context) {
-    return InkWell(
-      onTap: () => _handleResetApp(context),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+    final label =
+        '${LocalizationKeys.resetApp.tr(context)}. ${LocalizationKeys.resetAppDesc.tr(context)}';
+    return Semantics(
+      button: true,
+      label: label,
+      child: ExcludeSemantics(
+        child: InkWell(
+          onTap: () => _handleResetApp(context),
           borderRadius: BorderRadius.circular(12),
-          color: Colors.red.withValues(alpha: 0.05),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.restore, color: Colors.red.shade700),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    LocalizationKeys.resetApp.tr(context),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    LocalizationKeys.resetAppDesc.tr(context),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.red.withValues(alpha: 0.05),
             ),
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 20,
-              color: Colors.red.shade700,
+            child: Row(
+              children: [
+                Icon(Icons.restore, color: Colors.red.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        LocalizationKeys.resetApp.tr(context),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        LocalizationKeys.resetAppDesc.tr(context),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 20,
+                  color: Colors.red.shade700,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
