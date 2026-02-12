@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.owoblog" "\0"
-            VALUE "FileDescription", "owo_dashboard" "\0"
+            VALUE "FileDescription", "OwO! Dashboard" "\0"      // 修改描述
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "owo_dashboard" "\0"
+            VALUE "InternalName", "OwO! Dashboard" "\0"         // 修改内部名称
             VALUE "LegalCopyright", "Copyright (C) 2025 com.owoblog. All rights reserved." "\0"
-            VALUE "OriginalFilename", "owo_dashboard.exe" "\0"
-            VALUE "ProductName", "owo_dashboard" "\0"
+            VALUE "OriginalFilename", "OwO-Dashboard.exe" "\0" // 原始文件名
+            VALUE "ProductName", "OwO! Dashboard" "\0"          // 产品名称
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
