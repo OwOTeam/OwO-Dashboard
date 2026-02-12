@@ -1,134 +1,139 @@
-# Flutter App Framework
+# OwO! Dashboard
 
-一个现代化的跨平台应用框架，支持桌面端（Windows）和移动设备端（Android、iOS）。
+一个现代化的 Flutter 跨平台应用框架，专为桌面端（Windows）和移动端设计。
 
-## 特性
+[![Flutter](https://img.shields.io/badge/Flutter-%5E3.9.2-blue.svg)](https://flutter.dev)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+[![Author](https://img.shields.io/badge/Author-HanskiJay-orange.svg)](https://github.com/Tommy131)
 
-### 🎨 现代化UI设计
-- **响应式布局**：自动适配桌面端和移动端
-- **流畅动画**：侧边栏展开/折叠、页面切换等动画效果
-- **亮色/暗色主题**：支持主题切换
-- **精美组件**：卡片、按钮、导航栏等现代化组件
+---
 
-### 📱 移动端布局
-- **顶部AppBar**：显示Logo、标题和操作按钮
-- **主内容区**：展示当前页面内容
-- **底部导航栏**：参考Instagram、WeChat、Telegram的设计
-- **徽章支持**：显示未读消息数量等
+## 🏗️ 程序架构
 
-### 💻 桌面端布局
-- **可折叠侧边栏**：支持展开/折叠，带有流畅动画
-- **顶部AppBar**：显示当前页面标题和操作按钮
-- **主内容区**：宽敞的内容展示区域
+本项目采用 **组件化、模块化** 的架构设计，核心逻辑集中在 `lib/core` 目录下，业务功能通过 `lib/modules` 进行解耦扩展。
 
-### 🏗️ 模块化架构
-```
-lib/
-├── core/                    # 核心模块
-│   ├── app_theme.dart      # 主题配置
-│   └── responsive.dart     # 响应式布局辅助
-├── models/                  # 数据模型
-│   └── navigation_item.dart # 导航项模型
-├── widgets/                 # 可复用组件
-│   ├── desktop/
-│   │   └── sidebar.dart    # 桌面端侧边栏
-│   └── mobile/
-│       └── bottom_navbar.dart # 移动端底部导航栏
-├── layouts/                 # 布局组件
-│   ├── desktop_layout.dart # 桌面端布局
-│   └── mobile_layout.dart  # 移动端布局
-├── pages/                   # 页面
-│   ├── home/               # 首页
-│   ├── explore/            # 探索页
-│   ├── messages/           # 消息页
-│   ├── notifications/      # 通知页
-│   └── profile/            # 个人资料页
-└── main.dart               # 应用入口
-```
+### 核心目录结构
 
-## 技术栈
+- `lib/core/`：核心框架层
+  - `module_registry/`：模块注册与初始化中心。
+  - `setup_wizard/`：引导程序框架，支持动态步骤注入。
+  - `settings_pages/`：设置页面框架，支持多级菜单扩展。
+  - `services/`：全局服务（持久化、通知、字体迁移、重启逻辑等）。
+  - `layouts/`：响应式布局管理（桌面端/移动端自动切换）。
+  - `theme/`：基于 Material 3 的全局主题与样式管理。
+- `lib/modules/`：业务模块层，通过实现 `ModuleRegistrar` 接口向核心层注入功能。
+- `lib/widgets/`：跨模块共享的通用组件库。
 
-- **Flutter**: 跨平台UI框架
-- **Material Design 3**: 现代化设计语言
-- **响应式设计**: 自适应不同屏幕尺寸
+---
 
-## 运行项目
+## 🧩 快速开发指南
 
-### 桌面端（Windows）
-```bash
-flutter run -d windows
-```
+应用采用注册表模式，允许开发者在不修改核心代码的情况下扩展功能。
 
-### 移动端（Android）
-```bash
-flutter run -d android
-```
+### 1. 创建并注册业务模块
 
-### 移动端（iOS）
-```bash
-flutter run -d ios
-```
-
-## 主要功能
-
-### 1. 首页
-- 欢迎卡片
-- 统计数据展示
-- 最近活动列表
-
-### 2. 探索页
-- 分类标签筛选
-- 内容网格展示
-- 点赞和评论统计
-
-### 3. 消息页
-- 消息列表
-- 未读消息标记
-- 搜索功能
-
-### 4. 通知页
-- 不同类型的通知（点赞、评论、关注、分享）
-- 未读通知标记
-- 时间显示
-
-### 5. 个人资料页
-- 用户信息展示
-- 统计数据（帖子、关注、粉丝）
-- 设置选项列表
-
-## 自定义配置
-
-### 修改主题颜色
-编辑 `lib/core/app_theme.dart` 文件中的颜色常量：
+每个模块需实现 [module_registrar.dart](/lib/core/module_registry/module_registrar.dart) 接口：
 
 ```dart
-static const Color primaryColor = Color(0xFF6C5CE7);
-static const Color secondaryColor = Color(0xFFA29BFE);
-static const Color accentColor = Color(0xFF00B894);
+class MyFeatureModule implements ModuleRegistrar {
+  @override
+  String get moduleName => 'my_feature';
+
+  @override
+  void register() {
+    // 注册引导步骤
+    WizardStepRegistry().register('my_step', () => MyWizardStep());
+    // 注册设置页面
+    SettingsPageRegistry().register('my_settings', () => MySettingsPage());
+  }
+}
 ```
 
-### 添加新页面
-1. 在 `lib/pages/` 目录下创建新页面
-2. 在 `lib/main.dart` 中的 `_navigationItems` 列表中添加新的导航项
-
-### 调整响应式断点
-编辑 `lib/core/responsive.dart` 文件中的断点值：
+在 [app.dart](/lib/app.dart) 中激活模块：
 
 ```dart
-static bool isMobile(BuildContext context) =>
-    MediaQuery.of(context).size.width < 650;
-
-static bool isDesktop(BuildContext context) =>
-    MediaQuery.of(context).size.width >= 1100;
+registry.registerModule(MyFeatureModule());
 ```
 
-## 开发建议
+### 2. 添加引导步骤 (`WizardStep`)
 
-1. **保持模块化**：每个功能模块独立开发，便于维护
-2. **复用组件**：使用 `widgets/` 目录下的可复用组件
-3. **统一主题**：使用 `AppTheme` 中定义的颜色和样式
-4. **响应式优先**：确保所有页面在不同屏幕尺寸下都能正常显示
+引导步骤会自动按 `priority` 排序。继承 `WizardStep` 并实现其 build 方法：
 
-## 许可证
+```dart
+class MyWizardStep extends WizardStep {
+  @override
+  String get id => 'unique_step_id';
+  @override
+  String get title => '欢迎使用';
+  @override
+  int get priority => 50; // 数值越小越靠前
 
-MIT License
+  @override
+  Widget build(BuildContext context) {
+    return Center(child: Text('自定义步骤内容'));
+  }
+}
+```
+
+### 3. 添加设置页面 (`SettingsPageItem`)
+
+设置页面支持在主设置菜单中动态展示。
+
+```dart
+class MySettingsPage extends SettingsPageItem {
+  @override
+  String get id => 'my_feature_settings';
+  @override
+  String get label => '高级功能';
+  @override
+  IconData get icon => Icons.extension;
+
+  @override
+  Widget buildPage(BuildContext context, VoidCallback onBack) {
+    return MySettingsDetailPage(onBack: onBack);
+  }
+}
+```
+
+---
+
+## 🛠️ 核心 API 说明
+
+### 1. 日志系统 (`AppLogger`)
+
+[logger.dart](/lib/core/utils/logger.dart) 提供多环境支持与自动分割：
+
+- `AppLogger.info("message")`：记录普通信息。
+- `AppLogger.error("msg", e, s)`：记录错误及堆栈（自动保存至 `error.log`）。
+- **特性**：日志目录会自动追加在数据存储路径下，支持用户自定义分割大小。
+
+### 2. 持久化存储 (`PersistenceService`)
+
+[persistence_service.dart](/lib/core/services/persistence_service.dart) 负责数据存储与路径管理：
+
+- `PersistenceService().set('key', value)` / `get<T>('key')`。
+- **路径安全逻辑**：系统会自动清洗路径中的特殊字符，并**强制追加应用名称**作为子目录（例如：`D:\Data\OwO! Dashboard`），确保数据隔离。
+- `PersistenceService().resetApp()`：一键清除所有配置并**自动重启**应用。
+
+### 3. 字体与资源管理 (`FontService`)
+
+[font_service.dart](/lib/core/services/font_service.dart) 处理 Windows 系统资源的自动搬迁：
+
+- 首次初始化后，自动将 `AppData\Roaming` 下的资源移动到用户指定的存储路径。
+- 支持 `.ttf` 字体的动态注册，无需在 `pubspec.yaml` 中硬编码。
+
+---
+
+## 🔒 版权与许可证
+
+- **Copyright**: © 2023 - 2026 [OwOTeam-DGMT (OwOBlog)](https://owoblog.com). All rights reserved.
+- **License**: 本项目采用 **Apache License 2.0** 许可证。
+- **Author**: [HanskiJay](https://github.com/Tommy131)
+- **E-Mail**: [support@owoblog.com](mailto:support@owoblog.com)
+
+---
+
+## 🚀 运行环境
+
+- **Flutter SDK**: ^3.9.2
+- **Supported Platforms**: Windows (Primary), Android, iOS.

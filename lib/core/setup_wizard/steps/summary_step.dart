@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../services/persistence_service.dart';
 import '../wizard_step.dart';
 import '../wizard_controller.dart';
 import 'dart:io';
@@ -131,9 +132,16 @@ class SummaryStep extends WizardStep {
       case 0: // Storage path step (现在是第一个步骤)
         final path = controller.selectedPath;
         if (path != null) {
-          final dir = Directory(path);
+          // 在摘要中显示处理后的最终路径
+          final finalPath = PersistenceService.getProcessedRootPath(path);
+          final dir = Directory(finalPath);
           final pathName = dir.path.split(Platform.pathSeparator).last;
-          return {'存储路径': path, '目录名称': pathName, '路径类型': _getPathType(path)};
+          return {
+            '原始选择': path,
+            '最终存储': finalPath,
+            '目录名称': pathName,
+            '路径类型': _getPathType(path),
+          };
         }
         return {};
       case 1:
