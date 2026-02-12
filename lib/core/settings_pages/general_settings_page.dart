@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -381,6 +382,8 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
 
       // 重启应用
       if (mounted) {
+        final executable = Platform.resolvedExecutable;
+        await Process.start(executable, []);
         await windowManager.destroy();
       }
     } catch (e) {
