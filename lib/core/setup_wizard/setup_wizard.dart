@@ -29,6 +29,9 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
   late final ConfettiController _confettiController;
   bool _showCompletionAnimation = false;
   bool _showWelcomePage = true; // 欢迎页面状态
+  bool _isCompleting = false;
+  static const Duration _confettiDuration = Duration(seconds: 1);
+  static const Duration _particleSettleDuration = Duration(seconds: 3);
 
   @override
   void initState() {
@@ -37,9 +40,7 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
 
     windowManager.setPreventClose(true);
 
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 3),
-    );
+    _confettiController = ConfettiController(duration: _confettiDuration);
 
     // 1. 获取核心步骤
     final coreSteps = [
@@ -68,6 +69,8 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
   }
 
   void _onWizardCompleted() async {
+    if (_isCompleting) return;
+    _isCompleting = true;
     // 迁移并加载字体资源
     await FontService().initialize();
 
@@ -78,10 +81,10 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
     // 触发撒花动画
     _confettiController.play();
 
-    // 延迟后调用实际的完成回调
-    Future.delayed(const Duration(seconds: 3), () {
+    await Future.delayed(_confettiDuration + _particleSettleDuration);
+    if (mounted) {
       widget.onCompleted?.call();
-    });
+    }
   }
 
   /// 从欢迎页面进入配置步骤
