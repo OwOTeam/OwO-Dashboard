@@ -578,7 +578,8 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
       if (mounted) {
         final executable = Platform.resolvedExecutable;
         await Process.start(executable, []);
-        await windowManager.destroy();
+        await windowManager.setPreventClose(false);
+        await windowManager.close();
       }
     } catch (e) {
       if (!mounted) return;

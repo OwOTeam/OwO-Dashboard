@@ -117,7 +117,8 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
     );
 
     if (result == true) {
-      await windowManager.destroy();
+      await windowManager.setPreventClose(false);
+      await windowManager.close();
     }
   }
 
@@ -308,11 +309,12 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
                       child: Image.asset(
                         AppConstants.assetIconPath,
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => const Icon(
-                          Icons.dashboard_rounded,
-                          size: 60,
-                          color: Colors.white,
-                        ),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.dashboard_rounded,
+                              size: 60,
+                              color: Colors.white,
+                            ),
                       ),
                     ),
                   ),

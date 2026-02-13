@@ -39,12 +39,69 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => LocalizationService()),
+      ],
+      child: Consumer2<ThemeProvider, LocalizationService>(
+        builder: (context, themeProvider, localizationService, child) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            locale: localizationService.currentLocale,
+            theme: themeProvider.currentTheme.generateLightTheme(
+              adjustment: themeProvider.lightContrastAdjustment,
+            ),
+            darkTheme: themeProvider.currentTheme.generateDarkTheme(
+              adjustment: themeProvider.darkContrastAdjustment,
+            ),
+            themeMode: themeProvider.themeMode,
+            home: const MainScreen(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  /// 注册导航页面自定义注册方法
+  /// 允许用户在 modules 自定义注册导航页面
+  static void registerNavigation(
+    NavigationItem Function(BuildContext) factory,
+  ) {
+    NavigationRegistry().register(factory);
+  }
+
+  /// 注册侧边栏页脚自定义注册方法
+  static void registerSidebarFooter(SidebarFooter Function() factory) {
+    SidebarFooterRegistry().register(factory.call().id, factory);
+  }
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> with WindowListener {
   bool _isSetupMode = true;
   bool _isInitialized = false;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this);
+
     _initializeApp();
   }
 
@@ -96,6 +153,20 @@ class _MyAppState extends State<MyApp> {
           _isSetupMode = bootstrap.isFirstLaunch();
           _isInitialized = true;
         });
+
+        if (!_isSetupMode) {
+          // 应用启动后自动检查更新
+          // 延迟执行，确保UI已完全加载
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              UpdateChecker.checkAndShowUpdate(
+                context,
+                showLoadingSnackBar: false, // 自动检测时不显示"正在检查"提示
+                showNoUpdateSnackBar: false, // 自动检测时没有更新不提示
+              );
+            }
+          });
+        }
       }
     } catch (e, s) {
       AppLogger.error('App Initialization failed', e, s);
@@ -106,103 +177,6 @@ class _MyAppState extends State<MyApp> {
         });
       }
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: Colors.white,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading...'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => LocalizationService()),
-      ],
-      child: Consumer2<ThemeProvider, LocalizationService>(
-        builder: (context, themeProvider, localizationService, child) {
-          return MaterialApp(
-            title: AppConstants.appName,
-            debugShowCheckedModeBanner: false,
-            locale: localizationService.currentLocale,
-            theme: themeProvider.currentTheme.generateLightTheme(
-              adjustment: themeProvider.lightContrastAdjustment,
-            ),
-            darkTheme: themeProvider.currentTheme.generateDarkTheme(
-              adjustment: themeProvider.darkContrastAdjustment,
-            ),
-            themeMode: themeProvider.themeMode,
-            home: _isSetupMode
-                ? SetupWizard(
-                    key: ValueKey(_isSetupMode),
-                    onCompleted: () => setState(() => _isSetupMode = false),
-                  )
-                : const MainScreen(),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
-
-  /// 注册导航页面自定义注册方法
-  /// 允许用户在 modules 自定义注册导航页面
-  static void registerNavigation(
-    NavigationItem Function(BuildContext) factory,
-  ) {
-    NavigationRegistry().register(factory);
-  }
-
-  /// 注册侧边栏页脚自定义注册方法
-  static void registerSidebarFooter(SidebarFooter Function() factory) {
-    SidebarFooterRegistry().register(factory.call().id, factory);
-  }
-
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> with WindowListener {
-  int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    windowManager.addListener(this);
-
-    // 应用启动后自动检查更新
-    _performAutoUpdateCheck();
-  }
-
-  /// 自动执行更新检测（应用启动时）
-  void _performAutoUpdateCheck() {
-    // 延迟执行，确保UI已完全加载
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        UpdateChecker.checkAndShowUpdate(
-          context,
-          showLoadingSnackBar: false, // 自动检测时不显示"正在检查"提示
-          showNoUpdateSnackBar: false, // 自动检测时没有更新不提示
-        );
-      }
-    });
   }
 
   /// 集中处理关闭前的清理工作
@@ -246,6 +220,25 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     context.watch<LocalizationService>();
     bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -253,30 +246,38 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     final List<NavigationItem> navigationItems = ModuleRegistry().navigation
         .getAllItems(context);
 
-    return Column(
-      children: [
-        if (!Platform.isAndroid && !Platform.isIOS) ...[
-          CustomTitleBar(title: Text(AppConstants.appName)),
-          Divider(height: 1, color: Color(isDark ? 0xFF313131 : 0xFFD6D6D6)),
-        ],
-        Expanded(
-          child: Responsive(
-            // 移动端布局
-            mobile: MobileLayout(
-              navigationItems: navigationItems,
-              selectedIndex: _selectedIndex,
-              onNavigationChanged: _onNavigationChanged,
-            ),
-            // 桌面端布局
-            desktop: DesktopLayout(
-              navigationItems: navigationItems,
-              selectedIndex: _selectedIndex,
-              onNavigationChanged: _onNavigationChanged,
-            ),
-          ),
-        ),
-      ],
-    );
+    return _isSetupMode
+        ? SetupWizard(
+            key: ValueKey(_isSetupMode),
+            onCompleted: () => setState(() => _isSetupMode = false),
+          )
+        : Column(
+            children: [
+              if (!Platform.isAndroid && !Platform.isIOS) ...[
+                CustomTitleBar(title: Text(AppConstants.appName)),
+                Divider(
+                  height: 1,
+                  color: Color(isDark ? 0xFF313131 : 0xFFD6D6D6),
+                ),
+              ],
+              Expanded(
+                child: Responsive(
+                  // 移动端布局
+                  mobile: MobileLayout(
+                    navigationItems: navigationItems,
+                    selectedIndex: _selectedIndex,
+                    onNavigationChanged: _onNavigationChanged,
+                  ),
+                  // 桌面端布局
+                  desktop: DesktopLayout(
+                    navigationItems: navigationItems,
+                    selectedIndex: _selectedIndex,
+                    onNavigationChanged: _onNavigationChanged,
+                  ),
+                ),
+              ),
+            ],
+          );
   }
 
   @override
@@ -308,7 +309,8 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
         await _handleAppCleanup();
 
         // 销毁窗口
-        await windowManager.destroy();
+        await windowManager.setPreventClose(false);
+        await windowManager.close();
       }
     }
   }
