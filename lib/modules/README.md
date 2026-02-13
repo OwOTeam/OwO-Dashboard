@@ -2,139 +2,144 @@
 
 ## 概述
 
-本项目采用模块化架构，支持动态注册向导步骤和设置页面。
+本项目采用模块化架构，所有模块都通过统一入口注册并由核心注册表分发到各功能模块（向导步骤、设置页面、导航、AppBar、侧边栏页脚、国际化等）。
 
-## 目录结构
+## 当前目录结构
 
-```
+```tree
 lib/
 ├── core/
-│   ├── module_registrar.dart          # 模块注册接口
-│   ├── setup_wizard/
-│   │   ├── wizard_step.dart           # 向导步骤抽象类
-│   │   └── wizard_step_registry.dart  # 向导步骤注册表
-│   └── settings_pages/
-│       ├── settings_page_item.dart    # 设置页面抽象类
-│       └── settings_page_registry.dart # 设置页面注册表
+│   ├── module_registry/
+│   │   ├── module_registrar.dart
+│   │   ├── module_registry.dart
+│   │   ├── app_bar/
+│   │   ├── navigation/
+│   │   ├── settings_page/
+│   │   └── sidebar/
+│   └── setup_wizard/
+│       ├── wizard_step.dart
+│       └── wizard_step_registry.dart
 └── modules/
-    ├── module_registry.dart           # 模块注册管理器
-    ├── module_initializer.dart        # 模块初始化入口
-    ├── my_wizard_steps/               # 自定义向导步骤模块
-    │   ├── my_wizard_steps_module.dart
-    │   └── steps/
-    │       └── example_wizard_step.dart
-    └── my_settings_pages/             # 自定义设置页面模块
-        ├── my_settings_pages_module.dart
-        └── pages/
-            └── example_settings_page.dart
+    ├── example_module/
+    │   ├── localization/
+    │   ├── pages/
+    │   ├── wizard/
+    │   └── example_module.dart
+    ├── modules_register_entry.dart
+    └── README.md
 ```
 
-## 添加自定义向导步骤
+## 模块开发流程
 
-### 1. 创建步骤类
+### 1. 创建模块类
 
-在 `lib/modules/my_wizard_steps/steps/` 下创建新步骤：
+实现 `ModuleRegistrar`，在 `register()` 中注册模块能力：
 
 ```dart
 import 'package:flutter/material.dart';
-import '../../../core/setup_wizard/wizard_step.dart';
+import '../../core/module_registry/module_registrar.dart';
+import '../../core/module_registry/module_registry.dart';
+import '../../core/module_registry/navigation/navigation_item.dart';
+import '../../core/module_registry/settings_page/settings_page_item.dart';
+import '../../core/setup_wizard/wizard_step.dart';
 
-class MyCustomStep extends WizardStep {
+class MyModule implements ModuleRegistrar {
   @override
-  String get id => 'my_custom_step';
-
-  @override
-  String get title => '我的自定义步骤';
-
-  @override
-  int get priority => 30; // 数字越小越靠前
+  String get moduleName => 'my_module';
 
   @override
-  bool canGoNext() {
-    // 返回是否可以进入下一步
-    return true;
-  }
+  void register() {
+    final registry = ModuleRegistry();
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('自定义步骤内容'),
+    registry.navigation.register(
+      (context) => NavigationItem(
+        id: 'my_home',
+        title: 'My Home',
+        icon: Icons.home_outlined,
+        page: const SizedBox.shrink(),
+      ),
     );
+
+    registry.wizardSteps.register('my_step', () => _MyWizardStep());
+    registry.settingsPages.register('my_settings', () => _MySettingsPage());
   }
 }
-```
 
-### 2. 注册步骤
-
-在 `lib/modules/my_wizard_steps/my_wizard_steps_module.dart` 中注册：
-
-```dart
-@override
-void register() {
-  final registry = WizardStepRegistry();
-  registry.register('my_custom_step', () => MyCustomStep());
-}
-```
-
-## 添加自定义设置页面
-
-### 1. 创建页面类
-
-在 `lib/modules/my_settings_pages/pages/` 下创建新页面：
-
-```dart
-import 'package:flutter/material.dart';
-import '../../../core/settings_pages/settings_page_item.dart';
-
-class MyCustomSettingsPage extends SettingsPageItem {
+class _MyWizardStep extends WizardStep {
   @override
-  String get id => 'my_custom_settings';
+  String get id => 'my_step';
 
   @override
-  String get title => '我的设置';
-
-  @override
-  IconData get icon => Icons.settings;
+  String get title => 'My Step';
 
   @override
   int get priority => 50;
 
   @override
+  bool canGoNext() => true;
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('自定义设置页面')),
-    );
+    return const Center(child: Text('My Step'));
+  }
+}
+
+class _MySettingsPage extends SettingsPageItem {
+  @override
+  String get id => 'my_settings';
+
+  @override
+  String getTitle(BuildContext context) => 'My Settings';
+
+  @override
+  IconData get icon => Icons.settings;
+
+  @override
+  int get priority => 80;
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('My Settings'));
   }
 }
 ```
 
-### 2. 注册页面
+### 2. 在统一入口注册模块
 
-在 `lib/modules/my_settings_pages/my_settings_pages_module.dart` 中注册：
+在 `lib/modules/modules_register_entry.dart` 中注册模块并初始化：
 
 ```dart
-@override
-void register() {
-  final registry = SettingsPageRegistry();
-  registry.register('my_custom_settings', () => MyCustomSettingsPage());
-}
+final registry = ModuleRegistry();
+registry.registerModule(MyModule());
+registry.initializeAll();
 ```
 
-## 优先级说明
+## 常用注册能力
 
-- **向导步骤**：
-  - 10: 存储路径步骤
-  - 20: 日志设置步骤
-  - 1000: 总结步骤（始终最后）
+- 向导步骤：`registry.wizardSteps.register(id, factory)`
+- 设置页面：`registry.settingsPages.register(id, factory)`
+- 导航页：`registry.navigation.register(factory)`
+- AppBar 操作：`registry.appBarActions.register(id, factory)`
+- 侧边栏页脚：`registry.sidebarFooters.register(id, factory)`
 
-- **设置页面**：
-  - 数字越小越靠前
-  - 建议自定义页面使用 50-100 范围
+## 国际化模块接入
+
+模块可在 `register()` 内注册自己的翻译：
+
+```dart
+import '../../core/services/localization_service.dart';
+import 'localization/my_translations.dart';
+
+LocalizationService().registerModuleTranslations(myTranslations);
+```
+
+## 排序与优先级
+
+- 向导步骤与设置页面均按 `priority` 升序排列
+- 向导核心总结步骤固定为 `priority = 1000`，确保始终最后
 
 ## 注意事项
 
-1. 每个步骤/页面的 `id` 必须唯一
-2. 优先级决定显示顺序，数字越小越靠前
-3. 总结步骤应始终保持最高优先级（1000）
-4. 所有模块在 `lib/modules/module_initializer.dart` 中统一初始化
+1. 所有注册项的 `id` 必须唯一
+2. `modules_register_entry.dart` 是唯一注册入口
+3. 模块注册必须发生在 `initializeAll()` 之前
