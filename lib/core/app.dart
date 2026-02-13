@@ -242,7 +242,9 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
     final List<NavigationItem> navigationItems = ModuleRegistry().navigation
         .getAllItems(context);
 
-    return _isSetupMode
+    final moduleProviders = ModuleRegistry().providers.getAll();
+
+    Widget child = _isSetupMode
         ? SetupWizard(
             key: ValueKey(_isSetupMode),
             onCompleted: () => setState(() => _isSetupMode = false),
@@ -274,6 +276,12 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
               ),
             ],
           );
+
+    if (moduleProviders.isNotEmpty) {
+      return MultiProvider(providers: moduleProviders, child: child);
+    }
+
+    return child;
   }
 
   @override
