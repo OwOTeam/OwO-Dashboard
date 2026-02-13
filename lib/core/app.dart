@@ -185,6 +185,11 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       // Add this line to override the default close handler
       await windowManager.setPreventClose(true);
 
+      // 模拟加载核心资源和数据（仅用于演示高级加载效果）
+      // AppLogger.info('正在模拟加载业务数据 (5s)...');
+      // await Future.delayed(const Duration(seconds: 5));
+      // AppLogger.info('业务数据加载完成');
+
       if (mounted) {
         setState(() {
           _isSetupMode = bootstrap.isFirstLaunch();
@@ -313,6 +318,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
                 Text(
                   AppConstants.appName,
                   style: theme.textTheme.headlineMedium?.copyWith(
+                    fontFamily: 'MicrosoftYaHei',
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.5,
                     color: isDark ? Colors.white : Colors.black87,
@@ -372,7 +378,12 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
         : Column(
             children: [
               if (!Platform.isAndroid && !Platform.isIOS) ...[
-                CustomTitleBar(title: Text(AppConstants.appName)),
+                CustomTitleBar(
+                  title: Text(
+                    AppConstants.appName,
+                    style: const TextStyle(fontFamily: 'MicrosoftYaHei'),
+                  ),
+                ),
                 Divider(
                   height: 1,
                   color: Color(isDark ? 0xFF313131 : 0xFFD6D6D6),
