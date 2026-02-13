@@ -9,6 +9,7 @@ class NavigationItem {
   final IconData? activeIcon;
   final Widget page;
   final String? badge; // 可选的徽章文本（如消息数量）
+  final int priority; // 排序优先级，数值越小越靠前
 
   const NavigationItem({
     required this.id,
@@ -17,6 +18,7 @@ class NavigationItem {
     this.activeIcon,
     required this.page,
     this.badge,
+    this.priority = 100, // 默认优先级为 100
   });
 
   /// 复制并更新徽章
@@ -27,6 +29,7 @@ class NavigationItem {
     IconData? activeIcon,
     Widget? page,
     String? badge,
+    int? priority,
   }) {
     return NavigationItem(
       id: id ?? this.id,
@@ -35,6 +38,7 @@ class NavigationItem {
       activeIcon: activeIcon ?? this.activeIcon,
       page: page ?? this.page,
       badge: badge ?? this.badge,
+      priority: priority ?? this.priority,
     );
   }
 }

@@ -134,6 +134,7 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
           icon: Icons.settings_outlined,
           activeIcon: Icons.settings,
           page: const SettingsPage(),
+          priority: 9999, // 设置页面通常放在最后
         ),
       );
 

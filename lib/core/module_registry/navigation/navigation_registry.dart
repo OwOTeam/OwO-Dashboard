@@ -14,9 +14,12 @@ class NavigationRegistry {
     _itemFactories.add(factory);
   }
 
-  /// 获取所有已注册的导航项
+  /// 获取所有已注册的导航项（按优先级排序）
   List<NavigationItem> getAllItems(BuildContext context) {
-    return _itemFactories.map((factory) => factory(context)).toList();
+    final items = _itemFactories.map((factory) => factory(context)).toList();
+    // 按优先级排序，数值越小越靠前
+    items.sort((a, b) => a.priority.compareTo(b.priority));
+    return items;
   }
 
   /// 清空所有注册
