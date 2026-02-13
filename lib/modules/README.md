@@ -15,6 +15,7 @@ lib/
 │   │   ├── app_bar/
 │   │   ├── navigation/
 │   │   ├── settings_page/
+│   │   ├── about_page/
 │   │   └── sidebar/
 │   └── setup_wizard/
 │       ├── wizard_step.dart
@@ -62,6 +63,11 @@ class MyModule implements ModuleRegistrar {
 
     registry.wizardSteps.register('my_step', () => _MyWizardStep());
     registry.settingsPages.register('my_settings', () => _MySettingsPage());
+    registry.aboutPages.register(AboutPageItem(
+      id: 'my_card',
+      builder: (context) => const Card(child: Text('My Custom About Card')),
+      priority: 35,
+    ));
   }
 }
 
@@ -118,7 +124,7 @@ registry.initializeAll();
 
 - 向导步骤：`registry.wizardSteps.register(id, factory)`
 - 设置页面：`registry.settingsPages.register(id, factory)`
-- 导航页：`registry.navigation.register(factory)`
+- 关于页面卡片：`registry.aboutPages.register(item)`
 - AppBar 操作：`registry.appBarActions.register(id, factory)`
 - 侧边栏页脚：`registry.sidebarFooters.register(id, factory)`
 

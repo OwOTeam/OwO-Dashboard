@@ -47,6 +47,7 @@
 │  │  ├─ SidebarFooterRegistry   (侧边栏底部组件)         │    │
 │  │  ├─ WizardStepRegistry      (引导步骤)               │   │
 │  │  ├─ SettingsPageRegistry    (设置页面)               │   │
+│  │  ├─ AboutPageRegistry       (关于页面卡片)           │   │
 │  │  └─ CleanupCallbacks        (清理回调)               │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
@@ -74,7 +75,8 @@ lib/
 │   │   ├── navigation/            # 导航项注册
 │   │   ├── app_bar/               # 顶栏按钮注册
 │   │   ├── sidebar/               # 侧边栏组件注册
-│   │   ├── settings_page/         # 设置页面注册
+│   │   ├── settings_page/         # 设置页面注册中心
+│   │   ├── about_page/            # 关于页面注册中心
 │   │   └── update/                # 更新检测配置
 │   │       └── update_config.dart # 更新配置
 │   ├── setup_wizard/              # 引导程序框架
@@ -137,7 +139,8 @@ lib/
 
 - ✅ 多级设置菜单，支持动态扩展
 - ✅ 主题切换、语言切换、存储路径管理
-- ✅ 关于页面自动集成版本信息
+- ✅ 关于页面卡片支持模块化注册与优先级排序
+- ✅ 关于页面自动集成版本与开发者信息
 
 ### 6. **内置更新检测模块**
 
@@ -238,6 +241,19 @@ class YourCustomModule implements ModuleRegistrar {
 
     // 注册设置页面
     _registerSettingsPages(registry);
+
+    // 注册关于页面卡片
+    _registerAboutCards(registry);
+  }
+
+  void _registerAboutCards(ModuleRegistry registry) {
+    registry.aboutPages.register(
+      AboutPageItem(
+        id: 'your_card',
+        priority: 60,
+        builder: (context) => YourAboutCard(),
+      ),
+    );
   }
 
   void _registerNavigation(ModuleRegistry registry) {
@@ -553,6 +569,7 @@ await persistence.resetApp();
 
 - 自动清洗路径中的特殊字符
 - 强制追加应用名称作为子目录（如：`D:\Data\OwO! Dashboard`）
+- 启动检测逻辑：若配置路径失效或被删除，自动弹出本地化提示并重置初始化流程，确保数据安全
 - 确保数据隔离，防止误删其他应用数据
 
 ### 3. 国际化服务 (`LocalizationService`)

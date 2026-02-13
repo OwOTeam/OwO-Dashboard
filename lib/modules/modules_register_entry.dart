@@ -1,4 +1,5 @@
 import '../core/module_registry/module_registry.dart';
+import '../core/settings_pages/about_page.dart';
 
 // 导入所有业务模块
 import 'example_module/example_module.dart';
@@ -9,6 +10,9 @@ class ModulesRegisterEntry {
   /// 执行所有模块的注册操作
   static void registerAll() {
     final registry = ModuleRegistry();
+
+    // 0. 注册基础核心组件的默认内容
+    AboutPage.registerDefaults();
 
     // 1. 注册核心业务模块
     registry.registerModule(ExampleModule());
