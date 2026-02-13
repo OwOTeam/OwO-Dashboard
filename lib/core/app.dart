@@ -23,7 +23,6 @@ import '../modules/modules_register_entry.dart';
 
 import 'services/persistence_service.dart';
 import 'services/bootstrap_service.dart';
-import 'services/font_service.dart';
 import 'services/localization_service.dart';
 import 'localization/localization_keys.dart';
 import 'setup_wizard/setup_wizard.dart';
@@ -120,9 +119,6 @@ class _MainScreenState extends State<MainScreen> with WindowListener {
       await persistence.init(customPath: configuredPath);
 
       await AppLogger.init();
-
-      // 2. 初始化字体服务（如果已配置路径，则加载动态字体）
-      await FontService().initialize();
 
       // 3. 初始化语言服务
       await LocalizationService().init();

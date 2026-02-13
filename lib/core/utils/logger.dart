@@ -21,9 +21,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path/path.dart' as p;
-
 import '../services/persistence_service.dart';
-import '../services/bootstrap_service.dart';
 
 class AppLogger {
   static const String _enabledKey = 'log_enabled';
@@ -117,14 +115,9 @@ class AppLogger {
   static Future<Logger> _buildLogger() async {
     LogOutput? fileOutput;
 
-    final persistence = PersistenceService();
-    final rootPath = persistence.rootPath;
-    final bootstrap = BootstrapService();
-    final isFirstLaunch = bootstrap.isFirstLaunch();
-    final hasConfiguredPath = bootstrap.getDataPath() != null;
-
-    if (rootPath != null && _enabled && (!isFirstLaunch || hasConfiguredPath)) {
-      _logDirectory = p.join(rootPath, 'logs');
+    if (_enabled) {
+      _logDirectory =
+          p.join(PersistenceService.getAppCacheRootPath(), 'logs');
       try {
         final logDir = Directory(_logDirectory!);
         if (!await logDir.exists()) {
@@ -193,10 +186,10 @@ class _FileLogOutput extends LogOutput {
     final fileName = isError ? 'error.log' : 'app.log';
     final filePath = p.join(logDirPath, fileName);
 
-    _writetoFile(filePath, line);
+    _writeToFile(filePath, line);
   }
 
-  void _writetoFile(String filePath, String line) {
+  void _writeToFile(String filePath, String line) {
     try {
       final file = File(filePath);
 

@@ -12,7 +12,6 @@ import 'steps/storage_path_step.dart';
 import 'steps/log_settings_step.dart';
 import 'steps/summary_step.dart';
 import 'wizard_step_registry.dart';
-import '../services/font_service.dart';
 import '../services/localization_service.dart';
 import '../localization/localization_keys.dart';
 
@@ -71,8 +70,6 @@ class _SetupWizardState extends State<SetupWizard> with WindowListener {
   void _onWizardCompleted() async {
     if (_isCompleting) return;
     _isCompleting = true;
-    // 迁移并加载字体资源
-    await FontService().initialize();
 
     setState(() {
       _showCompletionAnimation = true;
