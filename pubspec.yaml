@@ -1,7 +1,7 @@
 name: owo_dashboard
 description: "An Application framework based on Flutter."
 publish_to: 'none'
-version: 0.0.1
+version: 0.0.2+2026021401
 
 environment:
   sdk: ^3.9.2

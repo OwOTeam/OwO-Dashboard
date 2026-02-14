@@ -22,8 +22,8 @@ class AppConstants {
   // ========== 应用信息 ==========
   static const String appName = 'OwO! Dashboard';
   static const String appPackageName = 'com.owoblog.owo_dashboard';
-  static const String appVersion = '0.0.1';
-  static const String appBuildVersion = '2026021101';
+  static const String appVersion = '0.0.2';
+  static const String appBuildVersion = '2026021401';
 
   // ========== 资源路径 ==========
   static const String assetIconPath = 'assets/icons/app_icon.png';
