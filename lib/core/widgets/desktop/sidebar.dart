@@ -105,6 +105,7 @@ class _DesktopSidebarState extends State<DesktopSidebar>
               _buildHeader(theme),
               const SizedBox(height: AppThemeData.spacingSmall),
               _buildNavigationList(),
+              _buildMiniInfoCard(theme),
               ...ModuleRegistry().sidebarFooters.getAllFooters().map(
                 (footer) => _isCollapsed
                     ? footer.buildCollapsed(context)
@@ -135,23 +136,6 @@ class _DesktopSidebarState extends State<DesktopSidebar>
       child: _isCollapsed
           ? _buildCollapsedHeader(theme)
           : _buildExpandedHeader(theme),
-    );
-  }
-
-  Widget _buildCollapsedHeader(ThemeData theme) {
-    return Center(
-      child: Semantics(
-        button: true,
-        label: LocalizationKeys.expandSidebar.tr(context),
-        child: Tooltip(
-          message: LocalizationKeys.expandSidebar.tr(context),
-          child: InkWell(
-            onTap: _toggleSidebar,
-            borderRadius: BorderRadius.circular(8),
-            child: ExcludeSemantics(child: _buildLogo(theme)),
-          ),
-        ),
-      ),
     );
   }
 
@@ -200,15 +184,60 @@ class _DesktopSidebarState extends State<DesktopSidebar>
   }
 
   Widget _buildLogoText(ThemeData theme) {
+    final titleBadge = ModuleRegistry().sidebarTitleBadge.resolve(context);
     return Expanded(
       child: _buildFadeTransition(
-        child: Text(
-          LocalizationKeys.userGreeting.tr(context),
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (titleBadge != null) ...[
+              const SizedBox(height: 2),
+              titleBadge.build(context, theme: theme, isCollapsed: false),
+            ] else ...[
+              Text(
+                LocalizationKeys.userGreeting.tr(context),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsedHeader(ThemeData theme) {
+    final titleBadge = ModuleRegistry().sidebarTitleBadge.resolve(context);
+    return Center(
+      child: Semantics(
+        button: true,
+        label: LocalizationKeys.expandSidebar.tr(context),
+        child: Tooltip(
+          message: LocalizationKeys.expandSidebar.tr(context),
+          child: InkWell(
+            onTap: _toggleSidebar,
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ExcludeSemantics(child: _buildLogo(theme)),
+                if (titleBadge != null)
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: titleBadge.build(
+                      context,
+                      theme: theme,
+                      isCollapsed: true,
+                    ),
+                  ),
+              ],
+            ),
           ),
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -251,11 +280,40 @@ class _DesktopSidebarState extends State<DesktopSidebar>
             item: widget.items[index],
             index: index,
             isSelected: widget.selectedIndex == index,
+            isEnabled: ModuleRegistry().navigationAvailability.isEnabled(
+              context,
+              widget.items[index],
+            ),
             isCollapsed: _isCollapsed,
             fadeAnimation: _fadeAnimation,
             onTap: () => widget.onItemSelected(index),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildMiniInfoCard(ThemeData theme) {
+    final card = ModuleRegistry().sidebarMiniCards.resolve(context);
+    if (card == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppThemeData.spacingSmall,
+        0,
+        AppThemeData.spacingSmall,
+        AppThemeData.spacingSmall,
+      ),
+      child: AnimatedSwitcher(
+        duration: AppThemeData.animationDuration,
+        child: KeyedSubtree(
+          key: ValueKey(
+            '${card.id}_${_isCollapsed ? 'collapsed' : 'expanded'}',
+          ),
+          child: card.build(context, theme: theme, isCollapsed: _isCollapsed),
+        ),
       ),
     );
   }
@@ -270,6 +328,7 @@ class _NavigationItemWidget extends StatelessWidget {
   final NavigationItem item;
   final int index;
   final bool isSelected;
+  final bool isEnabled;
   final bool isCollapsed;
   final Animation<double> fadeAnimation;
   final VoidCallback onTap;
@@ -278,6 +337,7 @@ class _NavigationItemWidget extends StatelessWidget {
     required this.item,
     required this.index,
     required this.isSelected,
+    required this.isEnabled,
     required this.isCollapsed,
     required this.fadeAnimation,
     required this.onTap,
@@ -298,26 +358,30 @@ class _NavigationItemWidget extends StatelessWidget {
           button: true,
           selected: isSelected,
           label: _buildSemanticsLabel(context),
-          onTap: onTap,
-          enabled: true,
+          onTap: isEnabled ? onTap : null,
+          enabled: isEnabled,
           focusable: true,
           child: ExcludeSemantics(
             child: InkWell(
-              onTap: onTap,
+              onTap: isEnabled ? onTap : null,
               borderRadius: BorderRadius.circular(
                 AppThemeData.borderRadiusSmall,
               ),
-              child: AnimatedContainer(
+              child: AnimatedOpacity(
                 duration: AppThemeData.animationDuration,
-                curve: Curves.easeInOut,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isCollapsed ? 6 : AppThemeData.spacingSmall,
-                  vertical: 10,
+                opacity: isEnabled ? 1 : 0.5,
+                child: AnimatedContainer(
+                  duration: AppThemeData.animationDuration,
+                  curve: Curves.easeInOut,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isCollapsed ? 6 : AppThemeData.spacingSmall,
+                    vertical: 10,
+                  ),
+                  decoration: _buildItemDecoration(theme),
+                  child: isCollapsed
+                      ? _buildCollapsedItem(theme)
+                      : _buildExpandedItem(context, theme),
                 ),
-                decoration: _buildItemDecoration(theme),
-                child: isCollapsed
-                    ? _buildCollapsedItem(theme)
-                    : _buildExpandedItem(context, theme),
               ),
             ),
           ),
@@ -327,6 +391,13 @@ class _NavigationItemWidget extends StatelessWidget {
   }
 
   BoxDecoration _buildItemDecoration(ThemeData theme) {
+    if (!isEnabled) {
+      return BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(AppThemeData.borderRadiusSmall),
+        border: Border.all(color: AppThemeData.getBorderColor(theme), width: 1),
+      );
+    }
     return BoxDecoration(
       color: isSelected
           ? theme.colorScheme.primary.withValues(alpha: 0.1)
@@ -408,6 +479,9 @@ class _NavigationItemWidget extends StatelessWidget {
   }
 
   Color _getItemColor(ThemeData theme) {
+    if (!isEnabled) {
+      return theme.colorScheme.onSurface.withValues(alpha: 0.45);
+    }
     return isSelected
         ? theme.colorScheme.primary
         : AppThemeData.getTextColor(theme, isPrimary: false);
