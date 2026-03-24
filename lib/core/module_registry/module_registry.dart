@@ -19,6 +19,7 @@ class ModuleRegistry {
   final List<ModuleRegistrar> _modules = [];
   final List<Future<void> Function()> _cleanupCallbacks = [];
   bool _initialized = false;
+  bool get isInitialized => _initialized;
 
   /// 注册模块
   void registerModule(ModuleRegistrar module) {
@@ -84,7 +85,8 @@ class ModuleRegistry {
   SidebarTitleRegistry get sidebarTitle => SidebarTitleRegistry();
 
   /// 获取侧边栏标题状态标识注册表
-  SidebarTitleBadgeRegistry get sidebarTitleBadge => SidebarTitleBadgeRegistry();
+  SidebarTitleBadgeRegistry get sidebarTitleBadge =>
+      SidebarTitleBadgeRegistry();
 
   /// 获取 Provider 注册表
   ProviderRegistry get providers => ProviderRegistry();

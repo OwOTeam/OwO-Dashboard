@@ -119,6 +119,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
 
           _buildUpdateCheckSection(theme),
           const SizedBox(height: AppThemeData.spacingSmall),
+
           _buildDangerSection(context, theme),
 
           if (kDebugMode) ...[
@@ -575,7 +576,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
         cancelText: '',
       );
 
-      if (mounted) {
+      if (mounted && !Platform.isIOS && !Platform.isAndroid) {
         final executable = Platform.resolvedExecutable;
         await Process.start(executable, []);
         await windowManager.setPreventClose(false);

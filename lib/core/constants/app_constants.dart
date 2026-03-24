@@ -41,6 +41,7 @@ class AppConstants {
       'https://github.com/OwOTeam/OwO-Dashboard';
   static const String instagramUrl = 'https://instagram.com/$instagramName';
   static const String owoServiceUrl = 'https://owoblog.com/service';
+  static const String discordInviteUrl = 'https://discord.gg/SjPaKwWW6P';
 
   // ========== API 配置 ==========
   static const String apiBaseUrl = 'https://owoserver.com/api/v1';
