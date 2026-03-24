@@ -12,7 +12,7 @@
     <!-- 接收启动完成广播 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="OwO! Tool Box"
+        android:label="OwO! Dashboard"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
