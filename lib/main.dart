@@ -7,6 +7,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:window_manager/window_manager.dart';
 
 import 'core/app.dart';
+import 'core/constants/app_constants.dart';
 import 'core/services/persistence_service.dart';
 import 'core/utils/logger.dart';
 
@@ -62,6 +63,9 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     await windowManager.ensureInitialized();
+
+    // 初始化应用常量 (版本号等)
+    await AppConstants.init();
 
     final appCacheRootPath = PersistenceService.getAppCacheRootPath();
     final appCacheRootDir = Directory(appCacheRootPath);
