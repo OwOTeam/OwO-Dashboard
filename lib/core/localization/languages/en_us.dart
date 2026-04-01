@@ -20,6 +20,10 @@ final Map<String, String> enUS = {
   LocalizationKeys.storageLocation: 'App Storage',
   LocalizationKeys.storageLocationDesc:
       'Set the location to store application data',
+  LocalizationKeys.storageLocationChangeConfirm:
+      'Changing the storage path will migrate app data to the new location. Continue?',
+  LocalizationKeys.storageLocationChangeSuccess:
+      'Storage path updated successfully',
   LocalizationKeys.logSettings: 'App Logs',
   LocalizationKeys.logSettingsDesc:
       'Record the operation process for easy troubleshooting',
@@ -32,6 +36,7 @@ final Map<String, String> enUS = {
       'This operation will clear all configurations, cache, and data, and re-guide you through initialization.\n\nThis operation is irreversible!',
   LocalizationKeys.resetSuccess: 'Reset complete, restarting application...',
   LocalizationKeys.success: 'Success',
+  LocalizationKeys.doubleBackExit: 'Press again to exit',
   LocalizationKeys.languageStep: 'Language Settings',
   LocalizationKeys.storagePathStep: 'Select Storage Path',
   LocalizationKeys.logSettingsStep: 'Log Settings',
