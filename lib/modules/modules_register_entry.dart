@@ -3,6 +3,7 @@ import '../core/settings_pages/about_page.dart';
 
 // 导入所有业务模块
 import 'example_module/example_module.dart';
+import 'log_viewer/log_viewer_module.dart';
 
 /// 模块集中注册入口
 /// 负责在应用启动时注册所有业务模块，以及处理全局清理逻辑
@@ -16,6 +17,7 @@ class ModulesRegisterEntry {
 
     // 1. 注册核心业务模块
     registry.registerModule(ExampleModule());
+    registry.registerModule(LogViewerModule());
     // 如果有其他模块，在此处继续注册...
 
     // 2. 初始化所有已注册模块
